@@ -268,12 +268,26 @@ export function leerCampos(modal) {
     for (const fs of raiz.querySelectorAll('fieldset')) {
       const radios = [...fs.querySelectorAll('input[type="radio"]')].filter((r) => !/\.pdf$|\.docx?$/i.test(r.getAttribute('aria-label') ?? ''))
       if (!radios.length || !visible(fs)) continue
-      const etiqueta = limpiar(fs.querySelector('legend')?.innerText) || limpiar(fs.innerText).slice(0, 300)
-      const opciones = radios.map(etiquetaDe)
-      const marcado = radios.find((r) => r.checked)
+      // La pregunta: el legend o, en la web nueva, el aria-label de los radios.
+      const etiqueta =
+        limpiar(fs.querySelector('legend')?.innerText) ||
+        limpiar(radios[0].getAttribute('aria-label')) ||
+        limpiar(fs.getAttribute('aria-label')) ||
+        limpiar(fs.innerText).slice(0, 300)
+      // El texto de cada opción: su label o, si está vacío, el texto que tiene al lado.
+      const opcionDe = (r) => {
+        const propia = limpiar([...(r.labels ?? [])].map((l) => l.innerText).join(' '))
+        if (propia) return propia
+        let el = r.parentElement
+        while (el && el !== fs && !limpiar(el.innerText)) el = el.parentElement
+        return el && el !== fs ? limpiar(el.innerText) : limpiar(r.value)
+      }
+      const opciones = radios.map(opcionDe)
       campos.push({
         id: marcar(fs), tipo: 'opcion', etiqueta, opciones,
-        valorActual: marcado ? etiquetaDe(marcado) : '',
+        // Lo que LinkedIn trae marcado no se da por bueno (puede ser una
+        // respuesta antigua o un valor por defecto): se responde según el perfil.
+        valorActual: '',
         obligatorio: obligatorio(radios[0], etiqueta),
       })
     }

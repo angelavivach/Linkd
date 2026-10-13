@@ -20,7 +20,12 @@ const modo = args.includes('--auto') ? 'auto' : args.includes('--prueba') ? 'pru
 
 let terminal
 const preguntar = (texto) => {
-  terminal ??= createInterface({ input: process.stdin, output: process.stdout })
+  if (!terminal) {
+    terminal = createInterface({ input: process.stdin, output: process.stdout })
+    // Mientras espera una respuesta, Ctrl+C lo recoge readline y no llega al
+    // proceso: se reenvía para que cierre el navegador y salga.
+    terminal.on('SIGINT', () => process.emit('SIGINT'))
+  }
   return terminal.question(texto)
 }
 
