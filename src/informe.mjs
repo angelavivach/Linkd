@@ -13,6 +13,8 @@ const ESTADOS = {
   omitida: 'No solicitada',
   'sin solicitar': 'No solicitada',
   error: 'Error al rellenar',
+  'no enviada': 'No enviada (decidiste no enviarla)',
+  'necesita ayuda': 'Necesita que la termines tú',
 }
 
 const GRUPOS = [
@@ -42,12 +44,14 @@ function tarjeta(o) {
       ${dato('Modalidad', ev.modalidad)}
       ${dato('Salario', ev.salario)}
       ${dato('Experiencia', ev.experiencia)}
+      ${dato('Se solicita en', o.via)}
     </dl>
     ${ev.tecnologias?.length ? `<ul class="tecnologias">${ev.tecnologias.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
     <div class="encaje">
       ${ev.aFavor?.length ? `<div><h4>Cumples</h4><ul class="si">${ev.aFavor.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
       ${ev.enContra?.length ? `<div><h4>Te falta o no consta</h4><ul class="no">${ev.enContra.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
     </div>
+    ${o.webSolicitud ? `<p class="motivo"><a href="${esc(o.webSolicitud)}" target="_blank" rel="noopener">Abrir la solicitud en su web</a></p>` : ''}
     <p class="motivo">${esc(ev.motivo)}${o.estado && o.estado !== 'enviada' && o.motivo ? ` <span>· ${esc(o.motivo)}</span>` : ''}</p>
   </article>`
 }

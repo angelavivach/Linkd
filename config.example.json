@@ -1,5 +1,7 @@
 {
   "navegador": "brave",
+  "email": "",
+  "webEmpresa": true,
   "cv": "perfil/cv.pdf",
   "sobreMi": "perfil/sobre-mi.md",
   "portfolio": "https://angelavivach.github.io",

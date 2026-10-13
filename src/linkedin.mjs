@@ -80,14 +80,14 @@ export async function haySesion(pagina) {
 
 // ---------------------------------------------------------------- Búsqueda --
 
-/** IDs de las ofertas con "Solicitud sencilla" de una búsqueda. */
-export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1 } = {}) {
+/** IDs de las ofertas de una búsqueda. */
+export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, soloSencilla = false } = {}) {
   const ids = new Set()
   for (let p = 0; p < paginas; p++) {
     const url = new URL('https://www.linkedin.com/jobs/search/')
     url.searchParams.set('keywords', busqueda.palabras)
     if (busqueda.ubicacion) url.searchParams.set('location', busqueda.ubicacion)
-    url.searchParams.set('f_AL', 'true') // solo "Solicitud sencilla"
+    if (soloSencilla) url.searchParams.set('f_AL', 'true')
     if (dias) url.searchParams.set('f_TPR', `r${dias * 86400}`)
     url.searchParams.set('sortBy', 'DD')
     if (p) url.searchParams.set('start', String(p * 25))
@@ -122,6 +122,13 @@ export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1 } 
 // ------------------------------------------------------------------ Oferta --
 
 const BOTON_SOLICITUD = /solicitud sencilla|easy apply/i
+// El "Solicitar" que lleva a la web de la empresa.
+const BOTON_EXTERNO = /^\s*(solicitar|apply|inscribirse)\b/i
+const botonExterno = (pagina) =>
+  pagina
+    .locator('.jobs-apply-button, button[aria-label*="sitio web"], button[aria-label*="company website"], button, a')
+    .filter({ hasText: BOTON_EXTERNO })
+    .first()
 
 export async function leerOferta(pagina, id) {
   const url = `https://www.linkedin.com/jobs/view/${id}/`
@@ -150,10 +157,32 @@ export async function leerOferta(pagina, id) {
   })
   const boton = pagina.locator('button, a').filter({ hasText: BOTON_SOLICITUD }).first()
   const sencilla = await boton.isVisible().catch(() => false)
-  return { id, url, ...datos, sencilla }
+  const externa = !sencilla && (await botonExterno(pagina).isVisible().catch(() => false))
+  return { id, url, ...datos, sencilla, externa }
 }
 
 // ---------------------------------------------------------- El formulario --
+
+/**
+ * Pulsa "Solicitar" y devuelve la pestaña con la web de la empresa (LinkedIn
+ * la abre en una pestaña nueva, a veces tras un aviso de "Continuar").
+ */
+export async function abrirWebExterna(pagina) {
+  const nueva = pagina.context().waitForEvent('page', { timeout: 20_000 }).catch(() => null)
+  await botonExterno(pagina).click()
+  await pausa(1500, 2500)
+  await pagina
+    .locator('[role="dialog"] button, [role="dialog"] a')
+    .filter({ hasText: /continuar|continue/i })
+    .first()
+    .click({ timeout: 3000 })
+    .catch(() => {})
+  const web = (await nueva) ?? (/linkedin\.com/.test(pagina.url()) ? null : pagina)
+  if (!web) throw new Error('no se abrió la web de la empresa')
+  await web.waitForLoadState('domcontentloaded').catch(() => {})
+  await pausa(2000, 3500)
+  return web
+}
 
 /** El modal de "Solicitud sencilla". */
 const modalDe = (pagina) => pagina.locator('.jobs-easy-apply-modal, div[role="dialog"]:has(form)').last()

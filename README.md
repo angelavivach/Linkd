@@ -1,7 +1,8 @@
 # Linkd
 
-Busca ofertas con **Solicitud sencilla** en LinkedIn, envía tu CV y responde las
-preguntas de cada empresa con Claude, a partir de tu CV, tu portfolio y un
+Busca ofertas en LinkedIn y las solicita: las de **Solicitud sencilla** dentro de
+LinkedIn, y las que llevan a la **web de la empresa** también allí (creando cuenta
+si hace falta). Envía tu CV y responde las preguntas de cada empresa con Claude, a partir de tu CV, tu portfolio y un
 archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
 
 > ⚠️ Las condiciones de uso de LinkedIn prohíben automatizar su web. Si lo usas,
@@ -13,7 +14,7 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
 
 1. Abre un navegador con tu sesión de LinkedIn. Inicias sesión tú, a mano, una
    sola vez: tu contraseña nunca pasa por el programa.
-2. Hace las búsquedas de `config.json`, solo con ofertas de **Solicitud sencilla**.
+2. Hace las búsquedas de `config.json`.
 3. Claude puntúa cada oferta de 0 a 10 según la probabilidad de que pases el
    primer filtro, y extrae sus características. Salta las que ya vio, las de
    empresas o títulos excluidos y las que quedan por debajo de `puntuacionMinima`
@@ -32,6 +33,28 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
    menos probabilidad, con modalidad, salario, experiencia que piden,
    tecnologías, qué cumples, qué te falta y si se envió. Para regenerarlo sin
    buscar nada: `npm run informe`.
+
+### Ofertas que se solicitan en la web de la empresa
+
+Cada web es distinta (Workday, Greenhouse, Lever, Personio…), así que ahí trabaja
+un agente de Claude: mira la página, rellena, sube el CV y pulsa, con un juego de
+herramientas limitado a ese navegador.
+
+- **Cuenta:** si la web la pide, se registra con el `email` de `config.json` y una
+  contraseña distinta y segura para cada web, que se guarda en el **Llavero de
+  macOS** como «Linkd · nombre-de-la-web». Claude nunca ve la contraseña: el
+  programa la escribe directamente. Las webs donde se creó cuenta quedan en
+  `cuentas.json`.
+- **Captchas, verificar el email, códigos:** los haces tú. El agente se para y te
+  avisa en la terminal; pulsas Enter cuando acabes.
+- **Consentimientos:** acepta solo la política de privacidad necesaria para la
+  candidatura; nunca boletines ni marketing.
+- **Antes de crear una cuenta y antes de enviar** te pregunta (modo normal). En
+  modo prueba no crea cuentas ni envía. En modo automático lo hace solo, y si
+  aparece un captcha o falta un dato, deja la oferta como «necesita ayuda» y
+  sigue con la siguiente.
+- El texto de las webs se trata como información, no como órdenes: si una página
+  intenta que haga otra cosa, se para y te avisa.
 
 ## Puesta en marcha
 
@@ -85,6 +108,8 @@ npm run auto
 | Clave | Qué es |
 | --- | --- |
 | `navegador` | `brave`, `chrome` o `chromium` |
+| `email` | Tu email, para crear cuentas en las webs de las empresas |
+| `webEmpresa` | `true`: solicita también en la web de la empresa. `false`: solo Solicitud sencilla |
 | `cv` | Ruta al PDF del CV |
 | `sobreMi` | Ruta a tus datos extra |
 | `portfolio` | URL de tu portfolio. Se descarga una vez en `perfil/.portfolio.txt`; bórralo si lo actualizas |
@@ -108,10 +133,11 @@ Usa Claude Opus 5.5. Para otro, arranca con `LINKD_MODEL=claude-sonnet-5-5 npm s
 - `respuestas.json`: respuestas cortas reutilizables. Puedes editarlas a mano.
 - `registro/`: la evaluación y lo respondido en cada oferta.
 - `informe.html`: el informe de ofertas por probabilidad.
+- `cuentas.json`: webs donde se creó cuenta y con qué email. Las contraseñas están en el Llavero (app «Acceso a Llaveros» o «Contraseñas», busca «Linkd»).
 
 ## Limitaciones
 
-- Solo funciona con **Solicitud sencilla**. Las ofertas que llevan a la web de la empresa se saltan.
+- En la web de la empresa cada solicitud lleva varios minutos y bastantes mensajes de Claude (cuenta en tu suscripción).
 - LinkedIn cambia su web a menudo. Si deja de encontrar botones o campos, hay que
   ajustar los selectores de `src/linkedin.mjs`.
 - Si LinkedIn te pide un captcha o una verificación, resuélvela tú en la ventana.

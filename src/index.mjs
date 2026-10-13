@@ -6,6 +6,7 @@ import { evaluarOferta, responderCampos } from './claude.mjs'
 import * as li from './linkedin.mjs'
 import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
 import { generarInforme } from './informe.mjs'
+import { solicitarEnWeb } from './web.mjs'
 
 /**
  * Modos:
@@ -166,7 +167,10 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
 
 /** Filtros baratos antes de gastar una llamada a Claude. */
 function motivoParaSaltar(oferta, config) {
-  if (!oferta.sencilla) return 'sin "Solicitud sencilla" (o ya solicitada)'
+  const webEmpresa = config.webEmpresa ?? true
+  if (!oferta.sencilla && !(oferta.externa && webEmpresa)) {
+    return oferta.externa ? 'se solicita en la web de la empresa (webEmpresa está desactivado)' : 'no tiene botón para solicitar (¿ya solicitada?)'
+  }
   const titulo = oferta.puesto.toLowerCase()
   const palabra = (config.excluirPalabrasEnTitulo ?? []).find((p) => titulo.includes(p.toLowerCase()))
   if (palabra) return `el título contiene "${palabra}"`
@@ -220,6 +224,7 @@ async function main() {
     const ids = await li.buscarOfertas(pagina, busqueda, {
       dias: config.soloUltimosDias,
       paginas: config.paginasPorBusqueda ?? 1,
+      soloSencilla: config.webEmpresa === false,
     })
     const nuevas = ids.filter((id) => !vistas.has(id))
     console.log(`   ${ids.length} ofertas, ${nuevas.length} nuevas`)
@@ -252,18 +257,34 @@ async function main() {
       }
 
       let resultado
-      try {
-        resultado = await solicitar(pagina, oferta, { perfil, respuestas, config })
-      } catch (e) {
-        await li.cerrarSolicitud(pagina).catch(() => {})
-        resultado = { estado: 'error', motivo: e.message }
+      if (oferta.sencilla) {
+        oferta.via = 'LinkedIn'
+        try {
+          resultado = await solicitar(pagina, oferta, { perfil, respuestas, config })
+        } catch (e) {
+          await li.cerrarSolicitud(pagina).catch(() => {})
+          resultado = { estado: 'error', motivo: e.message }
+        }
+      } else {
+        oferta.via = 'web de la empresa'
+        console.log('   🌐 Se solicita en la web de la empresa')
+        let web
+        try {
+          web = await li.abrirWebExterna(pagina)
+          oferta.webSolicitud = web.url()
+          resultado = await solicitarEnWeb(web, oferta, { perfil, config, modo, preguntar })
+        } catch (e) {
+          resultado = { estado: 'error', motivo: e.message }
+        } finally {
+          if (web && web !== pagina) await web.close().catch(() => {})
+        }
       }
       if (resultado.estado === 'parar') {
         await guardarOferta(oferta, { estado: 'sin solicitar', motivo: 'paraste antes de enviarla' })
         break buscar
       }
 
-      const icono = { enviada: '✅', omitida: '⏭ ', error: '❌', prueba: '🧪' }[resultado.estado]
+      const icono = { enviada: '✅', omitida: '⏭ ', error: '❌', prueba: '🧪', 'no enviada': '⏭ ', 'necesita ayuda': '✋' }[resultado.estado]
       console.log(`   ${icono} ${resultado.estado}${resultado.motivo ? `: ${resultado.motivo}` : ''}`)
       await guardarOferta(oferta, { estado: resultado.estado, motivo: resultado.motivo ?? '' })
       if (modo !== 'prueba') await anotar(oferta, resultado.estado, resultado.motivo)

@@ -16,6 +16,7 @@ postulaciones.csv
 respuestas.json
 registro/
 informe.html
+cuentas.json
 
 # El CV, esté donde esté
 *.pdf
