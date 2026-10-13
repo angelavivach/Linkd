@@ -78,6 +78,23 @@ export async function haySesion(pagina) {
   return /linkedin\.com\/feed/.test(pagina.url())
 }
 
+/**
+ * El texto de tu propio perfil de LinkedIn (titular, extracto, experiencia,
+ * formación y aptitudes), para que Claude sepa lo que tienes ahí.
+ */
+export async function leerMiPerfil(pagina) {
+  await pagina.goto('https://www.linkedin.com/in/me/', { waitUntil: 'domcontentloaded' })
+  await pausa(3000, 4500)
+  const url = pagina.url().replace(/\/$/, '')
+  const textoDe = () => pagina.evaluate(() => (document.querySelector('main')?.innerText ?? '').replace(/\n{2,}/g, '\n').trim())
+  const partes = [await textoDe()]
+  // Las aptitudes completas están en su propia página.
+  await pagina.goto(`${url}/details/skills/`, { waitUntil: 'domcontentloaded' }).catch(() => {})
+  await pausa(2500, 4000)
+  partes.push(await textoDe())
+  return partes.join('\n\n')
+}
+
 // ---------------------------------------------------------------- Búsqueda --
 
 /** IDs de las ofertas de una búsqueda. */

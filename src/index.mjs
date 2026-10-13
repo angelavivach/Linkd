@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
-import { cargarPerfil } from './perfil.mjs'
+import { cargarPerfil, perfilLinkedIn } from './perfil.mjs'
 import { evaluarOferta, responderCampos } from './claude.mjs'
 import * as li from './linkedin.mjs'
 import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
@@ -202,7 +202,6 @@ async function main() {
   }
 
   const config = await leerConfig()
-  const perfil = await cargarPerfil(config)
   const respuestas = await cargarRespuestas()
   const vistas = await ofertasVistas()
   const [esperaMin, esperaMax] = config.segundosEntreOfertas ?? [20, 60]
@@ -217,6 +216,7 @@ async function main() {
   })
 
   if (!(await li.haySesion(pagina))) throw new Error('No hay sesión de LinkedIn. Ejecuta antes: npm run login')
+  const perfil = await cargarPerfil(config, await perfilLinkedIn(() => li.leerMiPerfil(pagina)))
 
   let enviadas = 0
   buscar: for (const busqueda of config.busquedas ?? []) {
@@ -251,8 +251,13 @@ async function main() {
       })
       const puntuacion = oferta.evaluacion?.puntuacion
       if (oferta.evaluacion) console.log(`   Probabilidad ${puntuacion}/10: ${oferta.evaluacion.motivo}`)
-      if (puntuacion != null && puntuacion < (config.puntuacionMinima ?? 0)) {
-        const motivo = `probabilidad ${puntuacion}/10, por debajo del mínimo`
+      // Lo que decide es si tiene relación con lo que sabes, no la probabilidad:
+      // una relacionada se solicita aunque tenga un 2.
+      const noRelacionada = oferta.evaluacion && !oferta.evaluacion.relacionada
+      const bajoMinimo = puntuacion != null && puntuacion < (config.puntuacionMinima ?? 0)
+      if (noRelacionada || bajoMinimo) {
+        const motivo = noRelacionada ? 'no tiene relación con lo que sabes' : `probabilidad ${puntuacion}/10, por debajo del mínimo`
+        console.log(`   ⏭  ${motivo}`)
         await guardarOferta(oferta, { estado: 'omitida', motivo })
         if (modo !== 'prueba') await anotar(oferta, 'omitida', motivo)
         continue

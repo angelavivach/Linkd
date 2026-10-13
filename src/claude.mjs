@@ -64,12 +64,13 @@ export function evaluarOferta(perfil, oferta) {
     perfil,
     `${describirOferta(oferta)}
 
-Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Si el puesto no tiene que ver con lo que busca (puesto_que_busca en su perfil), puntúa como máximo 2. Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
+Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Indica además en "relacionada" si el puesto tiene relación con lo que sabe hacer según su CV, su perfil de LinkedIn y su portfolio, o con lo que busca (puesto_que_busca), aunque no cumpla todos los requisitos o la probabilidad sea baja. Un puesto de otro campo (hardware, ventas, otra ingeniería…) no está relacionado. Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
 Extrae también las características de la oferta tal como aparecen; si un dato no aparece, escribe "no indicado".`,
     {
       type: 'object',
       properties: {
         puntuacion: { type: 'integer' },
+        relacionada: { type: 'boolean' },
         probabilidad: { type: 'string', enum: ['alta', 'media', 'baja'] },
         motivo: { ...texto, description: 'Una o dos frases: por qué esa puntuación' },
         resumen: { ...texto, description: 'Qué se hace en el puesto, en una frase' },
@@ -80,7 +81,7 @@ Extrae también las características de la oferta tal como aparecen; si un dato 
         aFavor: { ...lista, description: 'Requisitos que la candidata cumple' },
         enContra: { ...lista, description: 'Requisitos que no cumple o que no constan en su perfil' },
       },
-      required: ['puntuacion', 'probabilidad', 'motivo', 'resumen', 'modalidad', 'salario', 'experiencia', 'tecnologias', 'aFavor', 'enContra'],
+      required: ['puntuacion', 'relacionada', 'probabilidad', 'motivo', 'resumen', 'modalidad', 'salario', 'experiencia', 'tecnologias', 'aFavor', 'enContra'],
       additionalProperties: false,
     },
   // Puntuar no necesita pensar mucho, y se hace con cada oferta.

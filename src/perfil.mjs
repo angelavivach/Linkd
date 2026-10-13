@@ -39,8 +39,25 @@ async function leerPortfolio(url) {
   }
 }
 
-/** Todo lo que Claude sabe de ti: CV, sobre-mi.md y portfolio. */
-export async function cargarPerfil(config) {
+/**
+ * Tu perfil de LinkedIn se lee una vez y se guarda en perfil/.linkedin.txt.
+ * Bórralo para que lo vuelva a leer (por ejemplo, si añades aptitudes).
+ */
+export async function perfilLinkedIn(leer) {
+  const cache = 'perfil/.linkedin.txt'
+  if (await existe(cache)) return readFile(cache, 'utf8')
+  try {
+    const texto = await leer()
+    await writeFile(cache, texto)
+    return texto
+  } catch (e) {
+    console.warn(`⚠️  No pude leer tu perfil de LinkedIn: ${e.message.split('\n')[0]}. Sigo sin él.`)
+    return ''
+  }
+}
+
+/** Todo lo que Claude sabe de ti: CV, perfil de LinkedIn, sobre-mi.md y portfolio. */
+export async function cargarPerfil(config, linkedin = '') {
   if (!(await existe(config.cv))) {
     throw new Error(`No encuentro el CV en "${config.cv}". Ponlo ahí (PDF) o cambia "cv" en config.json.`)
   }
@@ -59,6 +76,7 @@ export async function cargarPerfil(config) {
     // El tipo de puesto que busca: Claude puntúa más bajo lo que se aleja de esto.
     ...(config.objetivo ? [`<puesto_que_busca>${config.objetivo}</puesto_que_busca>`] : []),
     `<cv>\n${cv.trim()}\n</cv>`,
+    `<perfil_linkedin>\n${linkedin.trim()}\n</perfil_linkedin>`,
     `<sobre_mi>\n${sobreMi.trim()}\n</sobre_mi>`,
     `<portfolio url="${config.portfolio ?? ''}">\n${portfolio}\n</portfolio>`,
   ].join('\n\n')

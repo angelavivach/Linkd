@@ -15,10 +15,12 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
 1. Abre un navegador con tu sesión de LinkedIn. Inicias sesión tú, a mano, una
    sola vez: tu contraseña nunca pasa por el programa.
 2. Hace las búsquedas de `config.json`.
-3. Claude puntúa cada oferta de 0 a 10 según la probabilidad de que pases el
-   primer filtro, y extrae sus características. Salta las que ya vio, las de
-   empresas o títulos excluidos y las que quedan por debajo de `puntuacionMinima`
-   (por defecto 3: solicita casi todas y solo descarta las que no encajan nada).
+3. Claude lee tu CV, tu perfil de LinkedIn y tu portfolio, puntúa cada oferta de
+   0 a 10 según la probabilidad de que pases el primer filtro y extrae sus
+   características. **Solicita todas las que tienen relación con lo que sabes**,
+   aunque la probabilidad sea baja; salta las de otro campo, las que ya vio y las
+   de empresas o títulos excluidos. Tu perfil de LinkedIn se guarda en
+   `perfil/.linkedin.txt` (bórralo para que lo vuelva a leer).
 4. Rellena el formulario paso a paso:
    - sube tu CV si no hay uno elegido;
    - las preguntas que ya respondiste antes salen de `respuestas.json`;
@@ -120,7 +122,7 @@ npm run auto
 | `soloUltimosDias` | Solo ofertas publicadas en los últimos N días |
 | `paginasPorBusqueda` | Páginas de 25 resultados por búsqueda |
 | `maxPorEjecucion` | Solicitudes como máximo en cada ejecución |
-| `puntuacionMinima` | Probabilidad mínima (0–10) para solicitar. `0` = solicitar todas |
+| `puntuacionMinima` | Probabilidad mínima (0–10) además de que esté relacionada. `0` = todas las relacionadas |
 | `excluirEmpresas` | Empresas que no quieres |
 | `excluirPalabrasEnTitulo` | p. ej. `"senior"` |
 | `segundosEntreOfertas` | Pausa aleatoria entre solicitudes, `[mín, máx]` |
