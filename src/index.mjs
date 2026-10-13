@@ -224,16 +224,20 @@ async function main() {
   const perfil = await cargarPerfil(config, await perfilLinkedIn(() => li.leerMiPerfil(pagina)))
 
   let enviadas = 0
-  buscar: for (const busqueda of config.busquedas ?? []) {
+  // --oferta <id>: solo esa oferta, sin buscar (para repetir una concreta).
+  const unaOferta = args.includes('--oferta') ? args[args.indexOf('--oferta') + 1] : null
+  const busquedas = unaOferta ? [{ palabras: `oferta ${unaOferta}`, id: unaOferta }] : (config.busquedas ?? [])
+
+  buscar: for (const busqueda of busquedas) {
     console.log(`\n🔎 ${busqueda.palabras} — ${busqueda.ubicacion ?? ''}`)
-    const ids = await li.buscarOfertas(pagina, busqueda, {
+    const ids = busqueda.id ? [busqueda.id] : await li.buscarOfertas(pagina, busqueda, {
       dias: config.soloUltimosDias,
       paginas: config.paginasPorBusqueda ?? 1,
       soloSencilla: config.webEmpresa === false,
       niveles: config.nivelExperiencia ?? [],
       orden: config.orden ?? 'relevancia',
     })
-    const nuevas = ids.filter((id) => !vistas.has(id))
+    const nuevas = unaOferta ? ids : ids.filter((id) => !vistas.has(id))
     console.log(`   ${ids.length} ofertas, ${nuevas.length} nuevas`)
 
     for (const id of nuevas) {
