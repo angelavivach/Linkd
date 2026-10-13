@@ -141,9 +141,16 @@ export async function leerOferta(pagina, id) {
 
   const datos = await pagina.evaluate(() => {
     const txt = (sel) => document.querySelector(sel)?.innerText?.trim() ?? ''
+    // LinkedIn ofusca sus clases, pero el título de la pestaña es estable:
+    // "Puesto | Empresa | LinkedIn".
+    const [tPuesto, tEmpresa] = document.title.split(' | ')
+    const acerca = [...document.querySelectorAll('h2, h3')].find((h) => /acerca del empleo|about the job/i.test(h.innerText))
+    let bloque = acerca
+    while (bloque && bloque.innerText.length < 300 && bloque.parentElement) bloque = bloque.parentElement
     return {
-      puesto: txt('h1'),
+      puesto: tPuesto?.trim() || txt('h1'),
       empresa:
+        tEmpresa?.trim() ||
         txt('.job-details-jobs-unified-top-card__company-name') ||
         txt('.jobs-unified-top-card__company-name') ||
         document.querySelector('main a[href*="/company/"]')?.innerText?.trim() || '',
@@ -151,6 +158,7 @@ export async function leerOferta(pagina, id) {
         txt('.job-details-jobs-unified-top-card__primary-description-container') ||
         txt('.job-details-jobs-unified-top-card__tertiary-description-container') || '',
       descripcion:
+        (bloque?.innerText?.trim() ?? '') ||
         txt('#job-details') || txt('.jobs-description__content') || txt('.jobs-box__html-content') ||
         (document.querySelector('main')?.innerText ?? '').slice(0, 15000),
     }
@@ -185,14 +193,21 @@ export async function abrirWebExterna(pagina) {
 }
 
 /** El modal de "Solicitud sencilla". */
-const modalDe = (pagina) => pagina.locator('.jobs-easy-apply-modal, div[role="dialog"]:has(form)').last()
+const modalDe = (pagina) =>
+  pagina.locator('dialog[data-testid="dialog"][open], .jobs-easy-apply-modal, [role="dialog"][aria-modal="true"]').last()
 
 export async function abrirSolicitud(pagina) {
-  await pagina.locator('button, a').filter({ hasText: BOTON_SOLICITUD }).first().click()
+  const boton = pagina.locator('button, a').filter({ hasText: BOTON_SOLICITUD, visible: true }).first()
   const modal = modalDe(pagina)
-  await modal.waitFor({ timeout: 15_000 })
-  await pausa()
-  return modal
+  // Si la página aún se está montando, el primer clic a veces no hace nada.
+  for (let intento = 0; intento < 3; intento++) {
+    await boton.click()
+    if (await modal.waitFor({ timeout: 8000 }).then(() => true, () => false)) {
+      await pausa()
+      return modal
+    }
+  }
+  throw new Error('no se abrió el formulario de Solicitud sencilla')
 }
 
 /**
@@ -228,10 +243,11 @@ export function leerCampos(modal) {
       return id
     }
     const campos = []
+    const esSeguir = (cb) => /follow|sigue a|seguir a/i.test(`${cb.id} ${cb.getAttribute('aria-label') ?? ''} ${etiquetaDe(cb)}`)
 
     // Opción única: radios agrupados en un fieldset (los radios están ocultos; el fieldset no).
     for (const fs of raiz.querySelectorAll('fieldset')) {
-      const radios = [...fs.querySelectorAll('input[type="radio"]')]
+      const radios = [...fs.querySelectorAll('input[type="radio"]')].filter((r) => !/\.pdf$|\.docx?$/i.test(r.getAttribute('aria-label') ?? ''))
       if (!radios.length || !visible(fs)) continue
       const etiqueta = limpiar(fs.querySelector('legend')?.innerText) || limpiar(fs.innerText).slice(0, 300)
       const opciones = radios.map(etiquetaDe)
@@ -270,7 +286,7 @@ export function leerCampos(modal) {
     }
 
     for (const cb of raiz.querySelectorAll('input[type="checkbox"]')) {
-      if (cb.closest('[data-linkd]') || /follow/i.test(cb.id)) continue
+      if (cb.closest('[data-linkd]') || esSeguir(cb)) continue
       const etiqueta = etiquetaDe(cb)
       if (!etiqueta) continue
       campos.push({
@@ -283,9 +299,9 @@ export function leerCampos(modal) {
     for (const f of raiz.querySelectorAll('input[type="file"]')) {
       const etiqueta = etiquetaDe(f) || limpiar(contenedor(f)?.innerText)
       // Si ya hay un CV elegido de solicitudes anteriores no hace falta subir otro.
-      const yaHayCV = !!raiz.querySelector(
-        '.jobs-document-upload-redesign-card__container--selected, .jobs-resume-picker__resume--selected, [aria-label*="seleccionado"] [data-test-document-upload-file-name]',
-      )
+      const yaHayCV =
+        [...raiz.querySelectorAll('input[type="radio"]')].some((r) => r.checked && /\.(pdf|docx?)$/i.test(r.getAttribute('aria-label') ?? '')) ||
+        !!raiz.querySelector('.jobs-document-upload-redesign-card__container--selected, .jobs-resume-picker__resume--selected')
       campos.push({ id: marcar(f), tipo: 'archivo', etiqueta, valorActual: yaHayCV ? 'cv ya elegido' : '', obligatorio: false })
     }
 
@@ -336,14 +352,19 @@ export async function rellenar(modal, campo, valor) {
 /** Avisos de error que LinkedIn muestra bajo los campos. */
 export function erroresVisibles(modal) {
   return modal.evaluate((raiz) =>
-    [...raiz.querySelectorAll('.artdeco-inline-feedback--error, [data-test-form-element-error-messages]')]
-      .filter((e) => e.offsetParent)
-      .map((e) => {
-        const campo = e.closest('.fb-dash-form-element, .jobs-easy-apply-form-element, [data-test-form-element]')
-        const pregunta = campo?.querySelector('label, legend')?.innerText?.trim() ?? ''
-        return `${pregunta}: ${e.innerText.trim()}`.replace(/\s+/g, ' ')
-      })
-      .filter(Boolean),
+    // Los campos que LinkedIn marca como inválidos, con el aviso que tengan
+    // asociado. (Los role="alert" no sirven: también avisan de "CV cargado".)
+    [...raiz.querySelectorAll('[aria-invalid="true"]')]
+      .map((el) => {
+        const ids = `${el.getAttribute('aria-errormessage') ?? ''} ${el.getAttribute('aria-describedby') ?? ''}`.trim().split(/\s+/)
+        const aviso = ids.map((id) => id && document.getElementById(id)?.innerText?.trim()).filter(Boolean).join(' ') || 'respuesta no válida'
+        const pregunta =
+          [...(el.labels ?? [])].map((l) => l.innerText).join(' ') ||
+          el.closest('fieldset')?.querySelector('legend')?.innerText ||
+          el.getAttribute('aria-label') ||
+          ''
+        return `${pregunta.trim()}: ${aviso}`.replace(/\s+/g, ' ')
+      }),
   )
 }
 
@@ -368,8 +389,12 @@ export async function pulsarBoton(modal, nombre) {
 
 /** Desmarca "Seguir a la empresa", que viene marcado por defecto en el último paso. */
 export async function noSeguirEmpresa(modal) {
-  const cb = modal.locator('input[type="checkbox"][id*="follow"]').first()
-  if (await cb.isChecked().catch(() => false)) await cb.evaluate((i) => (i.labels?.[0] ?? i).click())
+  const casillas = modal.locator('input[type="checkbox"]')
+  for (let i = 0; i < (await casillas.count()); i++) {
+    const cb = casillas.nth(i)
+    const texto = `${await cb.getAttribute('id')} ${await cb.getAttribute('aria-label')}`
+    if (/follow|sigue a|seguir a/i.test(texto) && (await cb.isChecked())) await cb.evaluate((i) => (i.labels?.[0] ?? i).click())
+  }
 }
 
 /** Texto del paso de revisión, para enseñártelo antes de enviar. */
@@ -380,7 +405,7 @@ export async function cerrarSolicitud(pagina) {
   await pagina.keyboard.press('Escape')
   await pausa(800, 1500)
   await pagina
-    .locator('[role="alertdialog"] button, div[role="dialog"] button')
+    .locator('[role="alertdialog"] button, [role="dialog"] button, dialog button')
     .filter({ hasText: /descartar|discard/i })
     .first()
     .click({ timeout: 3000 })
