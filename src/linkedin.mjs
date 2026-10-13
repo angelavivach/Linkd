@@ -1,44 +1,81 @@
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { chromium } from 'playwright'
 
 export const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
 /** Pausas con algo de azar: LinkedIn bloquea a quien hace clic a ritmo de máquina. */
 export const pausa = (min = 1200, max = 3000) => esperar(min + Math.random() * (max - min))
 
-const BRAVE = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
+const RUTAS = {
+  brave: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+  chrome: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+}
+const PERFIL = resolve('.sesion')
+const PUERTO = 9333
 
 /**
- * Navegador con perfil propio en .sesion/: inicias sesión una vez a mano y las
- * cookies se quedan ahí. La contraseña nunca pasa por este programa.
- * `navegador` (de config.json): 'brave', 'chrome' o 'chromium'. Si el elegido
- * no está instalado, usa el Chromium de Playwright.
+ * Brave o Chrome arrancados como un navegador normal, con un perfil propio en
+ * .sesion/ (no toca tu perfil de siempre). Si Playwright los lanzara él mismo,
+ * marcaría el navegador como automatizado y Google rechazaría el inicio de
+ * sesión ("Es posible que el navegador no sea seguro").
  */
-export async function abrirNavegador(navegador = 'chrome') {
-  const opciones = { headless: false, viewport: null, locale: 'es-ES', args: ['--start-maximized'] }
-  const elegido =
-    navegador === 'brave' ? { executablePath: BRAVE }
-    : navegador === 'chrome' ? { channel: 'chrome' }
-    : {}
-  let contexto
-  try {
-    contexto = await chromium.launchPersistentContext('.sesion', { ...opciones, ...elegido })
-  } catch (e) {
-    if (navegador !== 'chromium') console.warn(`⚠️  No pude abrir ${navegador} (${e.message.split('\n')[0]}). Uso Chromium.`)
-    contexto = await chromium.launchPersistentContext('.sesion', opciones)
+function arrancar(navegador, extra = []) {
+  const ruta = RUTAS[navegador]
+  if (!ruta || !existsSync(ruta)) return null
+  return spawn(ruta, [`--user-data-dir=${PERFIL}`, '--no-first-run', '--no-default-browser-check', ...extra], {
+    stdio: 'ignore',
+  })
+}
+
+/**
+ * Para iniciar sesión: el navegador sin ningún control del programa. Entras tú
+ * (con Google o con email) y lo cierras con Cmd+Q; las cookies quedan en .sesion/.
+ * Devuelve false si ese navegador no está instalado.
+ */
+export function abrirParaLogin(navegador) {
+  const proceso = arrancar(navegador, ['https://www.linkedin.com/login'])
+  if (!proceso) return false
+  return new Promise((r) => proceso.on('exit', () => r(true)))
+}
+
+/**
+ * Para trabajar: arranca el navegador con un puerto de depuración local y
+ * Playwright se conecta a él. 'chromium' usa el Chromium de Playwright.
+ */
+export async function abrirNavegador(navegador = 'brave') {
+  if (navegador === 'chromium' || !RUTAS[navegador]) {
+    const contexto = await chromium.launchPersistentContext(PERFIL, { headless: false, viewport: null, locale: 'es-ES' })
+    const pagina = contexto.pages()[0] ?? (await contexto.newPage())
+    return { pagina, cerrar: () => contexto.close() }
   }
+
+  const proceso = arrancar(navegador, [`--remote-debugging-port=${PUERTO}`, '--remote-debugging-address=127.0.0.1'])
+  if (!proceso) throw new Error(`No encuentro ${navegador} en /Applications. Cambia "navegador" en config.json.`)
+
+  let navegadorCDP
+  for (let i = 0; i < 30 && !navegadorCDP; i++) {
+    await esperar(500)
+    navegadorCDP = await chromium.connectOverCDP(`http://127.0.0.1:${PUERTO}`).catch(() => null)
+  }
+  if (!navegadorCDP) {
+    throw new Error(`No pude conectar con ${navegador}. Si quedó abierta una ventana de Linkd (la de npm run login), ciérrala con Cmd+Q y vuelve a probar.`)
+  }
+  const contexto = navegadorCDP.contexts()[0]
   const pagina = contexto.pages()[0] ?? (await contexto.newPage())
-  return { contexto, pagina }
+  return {
+    pagina,
+    cerrar: async () => {
+      await navegadorCDP.close().catch(() => {})
+      proceso.kill()
+    },
+  }
 }
 
 export async function haySesion(pagina) {
   await pagina.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded' })
   await pausa()
   return /linkedin\.com\/feed/.test(pagina.url())
-}
-
-/** Abre el login y espera (hasta 5 min) a que entres tú. */
-export async function esperarLogin(pagina) {
-  await pagina.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded' })
-  await pagina.waitForURL(/linkedin\.com\/feed/, { timeout: 5 * 60_000 })
 }
 
 // ---------------------------------------------------------------- Búsqueda --

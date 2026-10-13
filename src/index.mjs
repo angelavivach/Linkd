@@ -176,12 +176,17 @@ function motivoParaSaltar(oferta, config) {
 
 async function main() {
   if (args[0] === 'login') {
-    const navegador = (await leerConfig().catch(() => ({}))).navegador
-    const { contexto, pagina } = await li.abrirNavegador(navegador)
-    console.log('Inicia sesión en LinkedIn en la ventana que se ha abierto (tienes 5 minutos)…')
-    await li.esperarLogin(pagina)
-    console.log('✅ Sesión guardada en .sesion/. Ya puedes usar npm start.')
-    await contexto.close()
+    const navegador = (await leerConfig().catch(() => ({}))).navegador ?? 'brave'
+    console.log(`Inicia sesión en LinkedIn en la ventana de ${navegador} que se ha abierto.`)
+    console.log('Cuando veas tu inicio de LinkedIn, cierra esa ventana con Cmd+Q.')
+    if (!(await li.abrirParaLogin(navegador))) {
+      // Chromium de Playwright: no hay otra forma que abrirlo controlado.
+      const { pagina, cerrar } = await li.abrirNavegador('chromium')
+      await pagina.goto('https://www.linkedin.com/login')
+      await pagina.waitForURL(/linkedin\.com\/feed/, { timeout: 5 * 60_000 })
+      await cerrar()
+    }
+    console.log('✅ Sesión guardada en .sesion/. Ya puedes usar npm run prueba.')
     return
   }
 
@@ -193,17 +198,14 @@ async function main() {
   const max = config.maxPorEjecucion ?? 15
 
   console.log(`Modo: ${modo}. Máximo ${max} solicitudes en esta ejecución.`)
-  const { contexto, pagina } = await li.abrirNavegador(config.navegador)
+  const { pagina, cerrar } = await li.abrirNavegador(config.navegador)
+  cerrarNavegador = cerrar
   process.on('SIGINT', async () => {
-    await contexto.close().catch(() => {})
+    await cerrar().catch(() => {})
     process.exit(130)
   })
 
-  if (!(await li.haySesion(pagina))) {
-    if (modo === 'auto') throw new Error('No hay sesión de LinkedIn. Ejecuta antes: npm run login')
-    console.log('No hay sesión de LinkedIn: inicia sesión en la ventana (tienes 5 minutos)…')
-    await li.esperarLogin(pagina)
-  }
+  if (!(await li.haySesion(pagina))) throw new Error('No hay sesión de LinkedIn. Ejecuta antes: npm run login')
 
   let enviadas = 0
   buscar: for (const busqueda of config.busquedas ?? []) {
@@ -258,11 +260,14 @@ async function main() {
 
   console.log(`\nListo: ${enviadas} ${modo === 'prueba' ? 'formularios completados (sin enviar)' : 'solicitudes enviadas'}. Detalle en postulaciones.csv y registro/.`)
   terminal?.close()
-  await contexto.close()
+  await cerrar()
 }
 
-main().catch((e) => {
+let cerrarNavegador
+
+main().catch(async (e) => {
   console.error(`\n❌ ${e.message}`)
+  await cerrarNavegador?.().catch(() => {})
   terminal?.close()
   process.exit(1)
 })
