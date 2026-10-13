@@ -15,3 +15,6 @@ perfil/*
 postulaciones.csv
 respuestas.json
 registro/
+
+# El CV, esté donde esté
+*.pdf
