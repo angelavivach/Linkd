@@ -1,6 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 
-const client = new Anthropic()
+/**
+ * Claude a través de tu sesión de Claude Code (igual que el bridge de Odín):
+ * sin clave de API, cuenta dentro de tu suscripción. Si no has iniciado sesión
+ * en Claude Code en este Mac, abre una terminal y ejecuta `claude` una vez.
+ */
 const MODELO = process.env.LINKD_MODEL || 'claude-opus-5-5'
 
 const INSTRUCCIONES = `Rellenas solicitudes de empleo de LinkedIn en nombre de la candidata cuyo perfil aparece abajo.
@@ -16,26 +20,34 @@ Reglas:
 - Textos libres (motivación, carta): breves, concretos y en primera persona; conecta experiencia real del perfil con la oferta. Máximo 120 palabras salvo que pidan más.
 - Si piden una URL de portfolio, web o GitHub, usa la del perfil.`
 
+// Sin ANTHROPIC_API_KEY: si estuviera definida, el SDK la usaría y cobraría la API.
+const { ANTHROPIC_API_KEY, ...entorno } = process.env
+
 /** Una petición a Claude que devuelve JSON con la forma del esquema. */
 async function pedirJSON(perfil, peticion, schema) {
-  const res = await client.beta.messages.create({
-    model: MODELO,
-    max_tokens: 16000,
-    // Si el modelo declina por un falso positivo de seguridad, la API
-    // reintenta en otro modelo dentro de la misma llamada.
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    output_config: { effort: 'medium', format: { type: 'json_schema', schema } },
-    // El perfil va en el system y con caché: es igual en todas las llamadas.
-    system: [
-      { type: 'text', text: `${INSTRUCCIONES}\n\n${perfil}`, cache_control: { type: 'ephemeral' } },
-    ],
-    messages: [{ role: 'user', content: peticion }],
+  const sesion = query({
+    prompt: peticion,
+    options: {
+      systemPrompt: `${INSTRUCCIONES}\n\n${perfil}`,
+      model: MODELO,
+      effort: 'medium',
+      outputFormat: { type: 'json_schema', schema },
+      // Solo tiene que contestar: sin herramientas, sin leer archivos, sin
+      // cargar tu configuración ni tu CLAUDE.md de Claude Code.
+      tools: [],
+      settingSources: [],
+      maxTurns: 4,
+      env: entorno,
+    },
   })
-  if (res.stop_reason === 'refusal') throw new Error('Claude no quiso responder a esta petición')
-  if (res.stop_reason === 'max_tokens') throw new Error('La respuesta de Claude se cortó')
-  const texto = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('')
-  return JSON.parse(texto)
+  for await (const mensaje of sesion) {
+    if (mensaje.type !== 'result') continue
+    if (mensaje.subtype !== 'success' || mensaje.structured_output == null) {
+      throw new Error(`Claude no respondió (${mensaje.subtype}). ¿Has iniciado sesión en Claude Code? Ejecuta "claude" en una terminal.`)
+    }
+    return mensaje.structured_output
+  }
+  throw new Error('Claude terminó sin respuesta')
 }
 
 const describirOferta = (oferta) =>

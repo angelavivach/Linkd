@@ -29,7 +29,10 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
 
 ## Puesta en marcha
 
-Necesitas Node 22 o superior y una clave de la API de Claude.
+Necesitas Node 22 o superior y **Claude Code con tu sesión iniciada** en este Mac
+(como Odín). No hace falta clave de API ni pagar nada aparte: lo que use Linkd
+cuenta dentro de tu suscripción de Claude. Si nunca has entrado en Claude Code,
+ejecuta `claude` en una terminal una vez e inicia sesión.
 
 ```bash
 npm install
@@ -39,12 +42,11 @@ npm install
 npm run setup
 ```
 
-1. Copia `.env.example` como `.env` y pon tu `ANTHROPIC_API_KEY`.
-2. Copia `config.example.json` como `config.json` y cambia las búsquedas.
-3. Pon tu CV en `perfil/cv.pdf` (PDF con texto, no escaneado).
-4. Copia `perfil/sobre-mi.example.md` como `perfil/sobre-mi.md` y rellénalo.
+1. Copia `config.example.json` como `config.json` y cambia las búsquedas.
+2. Pon tu CV en `perfil/cv.pdf` (PDF con texto, no escaneado).
+3. Copia `perfil/sobre-mi.example.md` como `perfil/sobre-mi.md` y rellénalo.
    Cuanto más completo, menos te preguntará.
-5. Inicia sesión en LinkedIn una vez:
+4. Inicia sesión en LinkedIn una vez:
 
 ```bash
 npm run login
@@ -87,6 +89,10 @@ npm run auto
 | `excluirEmpresas` | Empresas que no quieres |
 | `excluirPalabrasEnTitulo` | p. ej. `"senior"` |
 | `segundosEntreOfertas` | Pausa aleatoria entre solicitudes, `[mín, máx]` |
+
+## Modelo
+
+Usa Claude Opus 5.5. Para otro, arranca con `LINKD_MODEL=claude-sonnet-5-5 npm start`.
 
 ## Archivos que genera (no se suben a GitHub)
 
