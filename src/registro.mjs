@@ -6,11 +6,19 @@ const RESPUESTAS = 'respuestas.json'
 const existe = (ruta) => access(ruta).then(() => true, () => false)
 const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
-/** IDs de ofertas que ya pasaron por aquí (enviadas u omitidas), para no repetirlas. */
+/**
+ * IDs de ofertas que ya pasaron por aquí, para no repetirlas. Las que dieron
+ * error no cuentan: se vuelven a intentar en la siguiente ejecución.
+ */
 export async function ofertasVistas() {
   if (!(await existe(CSV))) return new Set()
   const filas = (await readFile(CSV, 'utf8')).split('\n').slice(1)
-  return new Set(filas.map((f) => f.split(',')[1]?.replace(/"/g, '')).filter(Boolean))
+  const vistas = new Set()
+  for (const fila of filas) {
+    const [, id, , , estado] = [...fila.matchAll(/"((?:[^"]|"")*)"/g)].map((m) => m[1])
+    if (id && estado !== 'error') vistas.add(id)
+  }
+  return vistas
 }
 
 /** Una línea en postulaciones.csv. estado: enviada | omitida | error | prueba */
