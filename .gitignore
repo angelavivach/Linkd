@@ -1,0 +1,17 @@
+node_modules/
+
+# Claves
+.env
+
+# Sesión de LinkedIn del navegador (cookies). Quien la tenga entra en tu cuenta.
+.sesion/
+
+# Tus datos personales
+config.json
+perfil/*
+!perfil/sobre-mi.example.md
+
+# Lo que genera el programa
+postulaciones.csv
+respuestas.json
+registro/
