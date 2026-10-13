@@ -4,17 +4,25 @@ export const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
 /** Pausas con algo de azar: LinkedIn bloquea a quien hace clic a ritmo de máquina. */
 export const pausa = (min = 1200, max = 3000) => esperar(min + Math.random() * (max - min))
 
+const BRAVE = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
+
 /**
  * Navegador con perfil propio en .sesion/: inicias sesión una vez a mano y las
  * cookies se quedan ahí. La contraseña nunca pasa por este programa.
- * Usa tu Google Chrome si lo tienes (LinkedIn lo trata mejor que Chromium).
+ * `navegador` (de config.json): 'brave', 'chrome' o 'chromium'. Si el elegido
+ * no está instalado, usa el Chromium de Playwright.
  */
-export async function abrirNavegador() {
+export async function abrirNavegador(navegador = 'chrome') {
   const opciones = { headless: false, viewport: null, locale: 'es-ES', args: ['--start-maximized'] }
+  const elegido =
+    navegador === 'brave' ? { executablePath: BRAVE }
+    : navegador === 'chrome' ? { channel: 'chrome' }
+    : {}
   let contexto
   try {
-    contexto = await chromium.launchPersistentContext('.sesion', { ...opciones, channel: 'chrome' })
-  } catch {
+    contexto = await chromium.launchPersistentContext('.sesion', { ...opciones, ...elegido })
+  } catch (e) {
+    if (navegador !== 'chromium') console.warn(`⚠️  No pude abrir ${navegador} (${e.message.split('\n')[0]}). Uso Chromium.`)
     contexto = await chromium.launchPersistentContext('.sesion', opciones)
   }
   const pagina = contexto.pages()[0] ?? (await contexto.newPage())

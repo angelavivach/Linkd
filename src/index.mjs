@@ -176,7 +176,8 @@ function motivoParaSaltar(oferta, config) {
 
 async function main() {
   if (args[0] === 'login') {
-    const { contexto, pagina } = await li.abrirNavegador()
+    const navegador = (await leerConfig().catch(() => ({}))).navegador
+    const { contexto, pagina } = await li.abrirNavegador(navegador)
     console.log('Inicia sesión en LinkedIn en la ventana que se ha abierto (tienes 5 minutos)…')
     await li.esperarLogin(pagina)
     console.log('✅ Sesión guardada en .sesion/. Ya puedes usar npm start.')
@@ -192,7 +193,7 @@ async function main() {
   const max = config.maxPorEjecucion ?? 15
 
   console.log(`Modo: ${modo}. Máximo ${max} solicitudes en esta ejecución.`)
-  const { contexto, pagina } = await li.abrirNavegador()
+  const { contexto, pagina } = await li.abrirNavegador(config.navegador)
   process.on('SIGINT', async () => {
     await contexto.close().catch(() => {})
     process.exit(130)

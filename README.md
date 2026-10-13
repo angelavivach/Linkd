@@ -78,6 +78,7 @@ npm run auto
 
 | Clave | Qué es |
 | --- | --- |
+| `navegador` | `brave`, `chrome` o `chromium` |
 | `cv` | Ruta al PDF del CV |
 | `sobreMi` | Ruta a tus datos extra |
 | `portfolio` | URL de tu portfolio. Se descarga una vez en `perfil/.portfolio.txt`; bórralo si lo actualizas |
