@@ -113,7 +113,10 @@ npm run auto
 | `cv` | Ruta al PDF del CV |
 | `sobreMi` | Ruta a tus datos extra |
 | `portfolio` | URL de tu portfolio. Se descarga una vez en `perfil/.portfolio.txt`; bórralo si lo actualizas |
+| `objetivo` | El tipo de puesto que buscas. Lo que no tenga que ver puntúa como máximo 2 |
 | `busquedas` | Lista de `{ "palabras", "ubicacion" }` |
+| `nivelExperiencia` | Niveles de LinkedIn: `1` prácticas, `2` sin experiencia, `3` junior, `4` intermedio-senior |
+| `orden` | `relevancia` o `fecha` |
 | `soloUltimosDias` | Solo ofertas publicadas en los últimos N días |
 | `paginasPorBusqueda` | Páginas de 25 resultados por búsqueda |
 | `maxPorEjecucion` | Solicitudes como máximo en cada ejecución |

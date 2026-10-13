@@ -81,7 +81,7 @@ export async function haySesion(pagina) {
 // ---------------------------------------------------------------- Búsqueda --
 
 /** IDs de las ofertas de una búsqueda. */
-export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, soloSencilla = false } = {}) {
+export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, soloSencilla = false, niveles = [], orden = 'relevancia' } = {}) {
   const ids = new Set()
   for (let p = 0; p < paginas; p++) {
     const url = new URL('https://www.linkedin.com/jobs/search/')
@@ -89,7 +89,9 @@ export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, s
     if (busqueda.ubicacion) url.searchParams.set('location', busqueda.ubicacion)
     if (soloSencilla) url.searchParams.set('f_AL', 'true')
     if (dias) url.searchParams.set('f_TPR', `r${dias * 86400}`)
-    url.searchParams.set('sortBy', 'DD')
+    url.searchParams.set('sortBy', orden === 'fecha' ? 'DD' : 'R')
+    // Nivel de experiencia: 1 prácticas, 2 sin experiencia, 3 junior/asociado, 4 intermedio-senior.
+    if (niveles.length) url.searchParams.set('f_E', niveles.join(','))
     if (p) url.searchParams.set('start', String(p * 25))
 
     await pagina.goto(url.toString(), { waitUntil: 'domcontentloaded' })

@@ -225,6 +225,8 @@ async function main() {
       dias: config.soloUltimosDias,
       paginas: config.paginasPorBusqueda ?? 1,
       soloSencilla: config.webEmpresa === false,
+      niveles: config.nivelExperiencia ?? [],
+      orden: config.orden ?? 'relevancia',
     })
     const nuevas = ids.filter((id) => !vistas.has(id))
     console.log(`   ${ids.length} ofertas, ${nuevas.length} nuevas`)

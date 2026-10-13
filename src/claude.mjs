@@ -24,13 +24,13 @@ Reglas:
 const { ANTHROPIC_API_KEY, ...entorno } = process.env
 
 /** Una petición a Claude que devuelve JSON con la forma del esquema. */
-async function pedirJSON(perfil, peticion, schema) {
+async function pedirJSON(perfil, peticion, schema, effort = 'medium') {
   const sesion = query({
     prompt: peticion,
     options: {
       systemPrompt: `${INSTRUCCIONES}\n\n${perfil}`,
       model: MODELO,
-      effort: 'medium',
+      effort,
       outputFormat: { type: 'json_schema', schema },
       // Solo tiene que contestar: sin herramientas, sin leer archivos, sin
       // cargar tu configuración ni tu CLAUDE.md de Claude Code.
@@ -64,7 +64,7 @@ export function evaluarOferta(perfil, oferta) {
     perfil,
     `${describirOferta(oferta)}
 
-Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
+Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Si el puesto no tiene que ver con lo que busca (puesto_que_busca en su perfil), puntúa como máximo 2. Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
 Extrae también las características de la oferta tal como aparecen; si un dato no aparece, escribe "no indicado".`,
     {
       type: 'object',
@@ -83,6 +83,8 @@ Extrae también las características de la oferta tal como aparecen; si un dato 
       required: ['puntuacion', 'probabilidad', 'motivo', 'resumen', 'modalidad', 'salario', 'experiencia', 'tecnologias', 'aFavor', 'enContra'],
       additionalProperties: false,
     },
+  // Puntuar no necesita pensar mucho, y se hace con cada oferta.
+    'low',
   )
 }
 

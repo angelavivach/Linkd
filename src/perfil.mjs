@@ -56,6 +56,8 @@ export async function cargarPerfil(config) {
   const portfolio = await leerPortfolio(config.portfolio)
 
   return [
+    // El tipo de puesto que busca: Claude puntúa más bajo lo que se aleja de esto.
+    ...(config.objetivo ? [`<puesto_que_busca>${config.objetivo}</puesto_que_busca>`] : []),
     `<cv>\n${cv.trim()}\n</cv>`,
     `<sobre_mi>\n${sobreMi.trim()}\n</sobre_mi>`,
     `<portfolio url="${config.portfolio ?? ''}">\n${portfolio}\n</portfolio>`,

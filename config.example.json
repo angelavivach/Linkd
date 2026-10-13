@@ -6,11 +6,18 @@
   "sobreMi": "perfil/sobre-mi.md",
   "portfolio": "https://angelavivach.github.io",
 
+  "objetivo": "Desarrolladora de Aplicaciones Multiplataforma · Data Science & IA",
   "busquedas": [
-    { "palabras": "desarrolladora frontend", "ubicacion": "España" },
-    { "palabras": "React developer", "ubicacion": "Remoto" }
+    {"palabras": "desarrollador aplicaciones multiplataforma", "ubicacion": "España"},
+    {"palabras": "data scientist junior", "ubicacion": "España"},
+    {"palabras": "inteligencia artificial junior", "ubicacion": "España"},
+    {"palabras": "machine learning junior", "ubicacion": "España"},
+    {"palabras": "python developer junior", "ubicacion": "España"},
+    {"palabras": "data analyst junior", "ubicacion": "España"}
   ],
-  "soloUltimosDias": 7,
+  "nivelExperiencia": [1, 2, 3],
+  "orden": "relevancia",
+  "soloUltimosDias": 14,
   "paginasPorBusqueda": 2,
 
   "maxPorEjecucion": 15,
