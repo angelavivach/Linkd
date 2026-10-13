@@ -20,10 +20,16 @@ export async function anotar(oferta, estado, motivo = '') {
   await appendFile(CSV, fila.map(celda).join(',') + '\n')
 }
 
-/** Guarda lo que se respondió en cada oferta, por si una empresa te pregunta. */
-export async function guardarDetalle(oferta, respuestas) {
+/**
+ * registro/<id>.json: la oferta, su evaluación, el estado y lo que se respondió
+ * (por si una empresa te llama). Cada llamada añade campos a lo que ya hay.
+ * Es también de donde sale el informe.
+ */
+export async function guardarOferta(oferta, datos = {}) {
   await mkdir('registro', { recursive: true })
-  await writeFile(`registro/${oferta.id}.json`, JSON.stringify({ ...oferta, respuestas }, null, 2))
+  const ruta = `registro/${oferta.id}.json`
+  const previo = (await existe(ruta)) ? JSON.parse(await readFile(ruta, 'utf8')) : {}
+  await writeFile(ruta, JSON.stringify({ ...previo, ...oferta, ...datos, fecha: new Date().toISOString() }, null, 2))
 }
 
 // ----------------------------------------------------- Respuestas sabidas --

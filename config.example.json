@@ -12,7 +12,7 @@
   "paginasPorBusqueda": 2,
 
   "maxPorEjecucion": 15,
-  "puntuacionMinima": 6,
+  "puntuacionMinima": 3,
   "excluirEmpresas": [],
   "excluirPalabrasEnTitulo": ["senior", "lead", "principal"],
 

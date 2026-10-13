@@ -14,8 +14,10 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
 1. Abre un navegador con tu sesión de LinkedIn. Inicias sesión tú, a mano, una
    sola vez: tu contraseña nunca pasa por el programa.
 2. Hace las búsquedas de `config.json`, solo con ofertas de **Solicitud sencilla**.
-3. Salta las ofertas que ya vio, las de empresas o títulos excluidos y las que
-   Claude puntúa por debajo de `puntuacionMinima` (de 0 a 10) frente a tu perfil.
+3. Claude puntúa cada oferta de 0 a 10 según la probabilidad de que pases el
+   primer filtro, y extrae sus características. Salta las que ya vio, las de
+   empresas o títulos excluidos y las que quedan por debajo de `puntuacionMinima`
+   (por defecto 3: solicita casi todas y solo descarta las que no encajan nada).
 4. Rellena el formulario paso a paso:
    - sube tu CV si no hay uno elegido;
    - las preguntas que ya respondiste antes salen de `respuestas.json`;
@@ -26,6 +28,10 @@ archivo con datos que el CV no tiene (salario, permiso de trabajo, preaviso…).
    `¿Enviar? [s]í / [n]o / [p]arar`.
 6. Lo apunta todo en `postulaciones.csv`, y lo que respondió en cada oferta en
    `registro/<id>.json` por si luego te llama la empresa.
+7. Al terminar abre **`informe.html`**: todas las ofertas evaluadas, de más a
+   menos probabilidad, con modalidad, salario, experiencia que piden,
+   tecnologías, qué cumples, qué te falta y si se envió. Para regenerarlo sin
+   buscar nada: `npm run informe`.
 
 ## Puesta en marcha
 
@@ -86,7 +92,7 @@ npm run auto
 | `soloUltimosDias` | Solo ofertas publicadas en los últimos N días |
 | `paginasPorBusqueda` | Páginas de 25 resultados por búsqueda |
 | `maxPorEjecucion` | Solicitudes como máximo en cada ejecución |
-| `puntuacionMinima` | Encaje mínimo (0–10) para solicitar. `0` = no evaluar |
+| `puntuacionMinima` | Probabilidad mínima (0–10) para solicitar. `0` = solicitar todas |
 | `excluirEmpresas` | Empresas que no quieres |
 | `excluirPalabrasEnTitulo` | p. ej. `"senior"` |
 | `segundosEntreOfertas` | Pausa aleatoria entre solicitudes, `[mín, máx]` |
@@ -100,7 +106,8 @@ Usa Claude Opus 5.5. Para otro, arranca con `LINKD_MODEL=claude-sonnet-5-5 npm s
 - `.sesion/`: las cookies de tu sesión de LinkedIn. Quien tenga esta carpeta entra en tu cuenta.
 - `postulaciones.csv`: una línea por oferta (enviada, omitida o error). Borra una línea para que vuelva a intentarla.
 - `respuestas.json`: respuestas cortas reutilizables. Puedes editarlas a mano.
-- `registro/`: lo respondido en cada oferta.
+- `registro/`: la evaluación y lo respondido en cada oferta.
+- `informe.html`: el informe de ofertas por probabilidad.
 
 ## Limitaciones
 

@@ -53,18 +53,34 @@ async function pedirJSON(perfil, peticion, schema) {
 const describirOferta = (oferta) =>
   `<oferta>\nPuesto: ${oferta.puesto}\nEmpresa: ${oferta.empresa}\nUbicación: ${oferta.ubicacion}\n\n${oferta.descripcion}\n</oferta>`
 
-/** ¿Merece la pena solicitar? Puntuación 0–10 y por qué. */
+/**
+ * ¿Qué probabilidad hay de que la llamen? Puntuación 0–10, y las
+ * características de la oferta para el informe.
+ */
 export function evaluarOferta(perfil, oferta) {
+  const texto = { type: 'string' }
+  const lista = { type: 'array', items: texto }
   return pedirJSON(
     perfil,
-    `${describirOferta(oferta)}\n\nEvalúa de 0 a 10 cuánto encaja la candidata con esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Sé realista: un 6 significa que tiene opciones razonables.`,
+    `${describirOferta(oferta)}
+
+Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
+Extrae también las características de la oferta tal como aparecen; si un dato no aparece, escribe "no indicado".`,
     {
       type: 'object',
       properties: {
         puntuacion: { type: 'integer' },
-        motivo: { type: 'string' },
+        probabilidad: { type: 'string', enum: ['alta', 'media', 'baja'] },
+        motivo: { ...texto, description: 'Una o dos frases: por qué esa puntuación' },
+        resumen: { ...texto, description: 'Qué se hace en el puesto, en una frase' },
+        modalidad: { ...texto, description: 'remoto, híbrido, presencial o no indicado' },
+        salario: texto,
+        experiencia: { ...texto, description: 'Años o nivel que piden' },
+        tecnologias: lista,
+        aFavor: { ...lista, description: 'Requisitos que la candidata cumple' },
+        enContra: { ...lista, description: 'Requisitos que no cumple o que no constan en su perfil' },
       },
-      required: ['puntuacion', 'motivo'],
+      required: ['puntuacion', 'probabilidad', 'motivo', 'resumen', 'modalidad', 'salario', 'experiencia', 'tecnologias', 'aFavor', 'enContra'],
       additionalProperties: false,
     },
   )

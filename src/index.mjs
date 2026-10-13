@@ -4,7 +4,8 @@ import { createInterface } from 'node:readline/promises'
 import { cargarPerfil } from './perfil.mjs'
 import { evaluarOferta, responderCampos } from './claude.mjs'
 import * as li from './linkedin.mjs'
-import { ofertasVistas, anotar, guardarDetalle, cargarRespuestas } from './registro.mjs'
+import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
+import { generarInforme } from './informe.mjs'
 
 /**
  * Modos:
@@ -63,7 +64,7 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
   for (let paso = 0; paso < 20; paso++) {
     if ((await li.botonDisponible(modal)) === 'enviar') {
       await li.noSeguirEmpresa(modal)
-      await guardarDetalle(oferta, usadas)
+      await guardarOferta(oferta, { respuestas: usadas })
 
       if (modo === 'prueba') {
         console.log(`\n${await li.resumenRevision(modal)}\n`)
@@ -175,6 +176,12 @@ function motivoParaSaltar(oferta, config) {
 }
 
 async function main() {
+  if (args[0] === 'informe') {
+    const informe = await generarInforme()
+    console.log(informe ? `📊 ${informe}` : 'Aún no hay ofertas evaluadas en registro/.')
+    return
+  }
+
   if (args[0] === 'login') {
     const navegador = (await leerConfig().catch(() => ({}))).navegador ?? 'brave'
     console.log(`Inicia sesión en LinkedIn en la ventana de ${navegador} que se ha abierto.`)
@@ -230,13 +237,18 @@ async function main() {
         continue
       }
 
-      if (config.puntuacionMinima > 0) {
-        const { puntuacion, motivo } = await evaluarOferta(perfil, oferta)
-        console.log(`   Encaje ${puntuacion}/10: ${motivo}`)
-        if (puntuacion < config.puntuacionMinima) {
-          if (modo !== 'prueba') await anotar(oferta, 'omitida', `encaje ${puntuacion}/10: ${motivo}`)
-          continue
-        }
+      // Todas se evalúan, aunque luego no se soliciten: el informe las necesita.
+      oferta.evaluacion = await evaluarOferta(perfil, oferta).catch((e) => {
+        console.warn(`   ⚠️  No pude evaluarla: ${e.message}`)
+        return null
+      })
+      const puntuacion = oferta.evaluacion?.puntuacion
+      if (oferta.evaluacion) console.log(`   Probabilidad ${puntuacion}/10: ${oferta.evaluacion.motivo}`)
+      if (puntuacion != null && puntuacion < (config.puntuacionMinima ?? 0)) {
+        const motivo = `probabilidad ${puntuacion}/10, por debajo del mínimo`
+        await guardarOferta(oferta, { estado: 'omitida', motivo })
+        if (modo !== 'prueba') await anotar(oferta, 'omitida', motivo)
+        continue
       }
 
       let resultado
@@ -246,10 +258,14 @@ async function main() {
         await li.cerrarSolicitud(pagina).catch(() => {})
         resultado = { estado: 'error', motivo: e.message }
       }
-      if (resultado.estado === 'parar') break buscar
+      if (resultado.estado === 'parar') {
+        await guardarOferta(oferta, { estado: 'sin solicitar', motivo: 'paraste antes de enviarla' })
+        break buscar
+      }
 
       const icono = { enviada: '✅', omitida: '⏭ ', error: '❌', prueba: '🧪' }[resultado.estado]
       console.log(`   ${icono} ${resultado.estado}${resultado.motivo ? `: ${resultado.motivo}` : ''}`)
+      await guardarOferta(oferta, { estado: resultado.estado, motivo: resultado.motivo ?? '' })
       if (modo !== 'prueba') await anotar(oferta, resultado.estado, resultado.motivo)
       if (resultado.estado === 'enviada' || resultado.estado === 'prueba') {
         enviadas++
@@ -258,9 +274,11 @@ async function main() {
     }
   }
 
-  console.log(`\nListo: ${enviadas} ${modo === 'prueba' ? 'formularios completados (sin enviar)' : 'solicitudes enviadas'}. Detalle en postulaciones.csv y registro/.`)
+  console.log(`\nListo: ${enviadas} ${modo === 'prueba' ? 'formularios completados (sin enviar)' : 'solicitudes enviadas'}.`)
   terminal?.close()
   await cerrar()
+  const informe = await generarInforme()
+  if (informe) console.log(`📊 Informe de ofertas por probabilidad: ${informe}`)
 }
 
 let cerrarNavegador
