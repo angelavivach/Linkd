@@ -55,8 +55,12 @@ const servidor = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/ejecutar') {
     const orden = `cd '${RAIZ}' && npm start`
     const guion = `tell application "Terminal" to do script "${orden.replace(/"/g, '\\"')}"\ntell application "Terminal" to activate`
-    execFile('osascript', ['-e', guion], (err) => {})
-    return responder(res, 200, { ok: true })
+    try {
+      await new Promise((ok, mal) => execFile('osascript', ['-e', guion], (err, _out, error) => (err ? mal(new Error(error || err.message)) : ok())))
+      return responder(res, 200, { ok: true })
+    } catch (e) {
+      return responder(res, 500, { error: `No pude abrir la Terminal: ${e.message.trim()}` })
+    }
   }
 
   responder(res, 404, { error: 'no encontrado' })

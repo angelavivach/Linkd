@@ -50,6 +50,7 @@
       <button type="button" id="ejecutarLocal">Guardar y ejecutar Linkd</button>
     </span>
   </div>
+  <p id="estado" role="status" style="position:fixed;left:0;right:0;bottom:118px;text-align:center;font-size:13px;margin:0;pointer-events:none"></p>
 
   <form id="formulario" autocomplete="off">
 
@@ -358,22 +359,29 @@ $('guardarBorrador').addEventListener('click', guardarBorrador)
 const esPanelLocal = ['127.0.0.1', 'localhost'].includes(location.hostname) && location.port === '4321'
 if (esPanelLocal) {
   $('barraLocal').hidden = false
+  // El resultado se ve en la propia página (no en un aviso que el navegador podría bloquear).
+  const mostrar = (texto, error = false) => {
+    $('estado').textContent = texto
+    $('estado').style.color = error ? '#b3261e' : 'var(--acento)'
+  }
   async function guardarEnLinkd() {
-    const errores = avisos()
-    if (errores.length && !confirm(`Antes de guardar:\n\n- ${errores.join('\n- ')}\n\n¿Guardar igualmente?`)) return false
+    mostrar('Guardando…')
     const r = await fetch('/guardar', { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ config: construirConfig(), sobreMi: construirSobreMi() }) })
-    const datos = await r.json()
-    if (!r.ok) { alert(`No se pudo guardar: ${datos.error}`); return false }
+    const datos = await r.json().catch(() => ({}))
+    if (!r.ok) { mostrar(`No se pudo guardar: ${datos.error ?? r.status}`, true); return false }
     return true
   }
   $('guardarLocal').addEventListener('click', async () => {
-    if (await guardarEnLinkd()) alert('Guardado: config.json en Linkd y sobre-mi.md en perfil/.')
+    if (await guardarEnLinkd()) mostrar('✅ Guardado: config.json en Linkd y sobre-mi.md en perfil/.')
   })
   $('ejecutarLocal').addEventListener('click', async () => {
     if (!(await guardarEnLinkd())) return
-    await fetch('/ejecutar', { method: 'POST' })
-    alert('Se ha abierto una Terminal con Linkd. Responde allí a lo que te pregunte.')
+    mostrar('Abriendo la Terminal…')
+    const r = await fetch('/ejecutar', { method: 'POST' })
+    const datos = await r.json().catch(() => ({}))
+    if (!r.ok) return mostrar(`❌ ${datos.error ?? 'no se pudo abrir la Terminal'}`, true)
+    mostrar('✅ Linkd se está ejecutando en una ventana de Terminal. Responde allí a lo que te pregunte.')
   })
 }
 </script>
