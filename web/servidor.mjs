@@ -3,7 +3,7 @@
 // botones que la versión web no tiene: guardar los archivos en la carpeta de
 // Linkd y abrir una Terminal con el programa. Nada de esto sale de tu Mac.
 import { createServer } from 'node:http'
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -12,6 +12,16 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PUERTO = 4321
 const ORIGENES = [`127.0.0.1:${PUERTO}`, `localhost:${PUERTO}`]
 const MAX = 200_000
+
+let proceso = null
+const historial = []
+const clientes = new Set()
+
+function emitir(trozo) {
+  historial.push(trozo)
+  if (historial.length > 4000) historial.shift()
+  for (const c of clientes) c.write(`data: ${JSON.stringify(trozo)}\n\n`)
+}
 
 const responder = (res, codigo, cuerpo, tipo = 'application/json') => {
   res.writeHead(codigo, { 'content-type': tipo, 'cache-control': 'no-store' })
@@ -51,20 +61,54 @@ const servidor = createServer(async (req, res) => {
     }
   }
 
-  // Abre una Terminal nueva con el programa: así te puede preguntar en la terminal.
+  // Ejecuta el programa dentro de este panel: su salida llega a la página y
+  // sus preguntas se responden allí (por stdin).
   if (req.method === 'POST' && req.url === '/ejecutar') {
-    const orden = `cd '${RAIZ}' && npm start`
-    const guion = `tell application "Terminal" to do script "${orden.replace(/"/g, '\\"')}"\ntell application "Terminal" to activate`
+    if (proceso) return responder(res, 409, { error: 'Linkd ya está en marcha.' })
+    proceso = spawn('node', ['src/index.mjs'], { cwd: RAIZ, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] })
+    emitir(`▶ Linkd arrancado (${new Date().toLocaleTimeString('es-ES')})\n`)
+    proceso.stdout.on('data', (d) => emitir(d.toString()))
+    proceso.stderr.on('data', (d) => emitir(d.toString()))
+    proceso.on('exit', (codigo) => {
+      emitir(`\n■ Linkd ha terminado${codigo ? ` (código ${codigo})` : ''}.\n`)
+      proceso = null
+    })
+    return responder(res, 200, { ok: true })
+  }
+
+  // La salida en directo. Al conectarse, recibe lo que ya se había escrito.
+  if (req.method === 'GET' && req.url === '/eventos') {
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' })
+    for (const trozo of historial) res.write(`data: ${JSON.stringify(trozo)}\n\n`)
+    clientes.add(res)
+    req.on('close', () => clientes.delete(res))
+    return
+  }
+
+  // Tu respuesta a una pregunta de Linkd.
+  if (req.method === 'POST' && req.url === '/responder') {
     try {
-      await new Promise((ok, mal) => execFile('osascript', ['-e', guion], (err, _out, error) => (err ? mal(new Error(error || err.message)) : ok())))
+      const { texto } = await leerCuerpo(req)
+      if (!proceso?.stdin.writable) return responder(res, 409, { error: 'Linkd no está esperando nada ahora mismo.' })
+      proceso.stdin.write(`${texto ?? ''}\n`)
+      emitir(`› ${texto ?? ''}\n`)
       return responder(res, 200, { ok: true })
     } catch (e) {
-      return responder(res, 500, { error: `No pude abrir la Terminal: ${e.message.trim()}` })
+      return responder(res, 400, { error: e.message })
     }
+  }
+
+  // Para el programa como si pulsaras Ctrl+C (así guarda el informe).
+  if (req.method === 'POST' && req.url === '/parar') {
+    if (!proceso) return responder(res, 409, { error: 'Linkd no está en marcha.' })
+    proceso.kill('SIGINT')
+    return responder(res, 200, { ok: true })
   }
 
   responder(res, 404, { error: 'no encontrado' })
 })
+
+process.on('SIGINT', () => { proceso?.kill('SIGINT'); process.exit(0) })
 
 servidor.listen(PUERTO, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${PUERTO}/`

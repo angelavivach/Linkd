@@ -31,6 +31,9 @@
   button.secundario { background: transparent; color: var(--acento); border: 1px solid var(--acento); }
   pre { background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 12px; overflow: auto; font-size: 12px; max-height: 320px; white-space: pre-wrap; }
   details summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+  #registro { background: #0d0d0f; color: #e6e6e6; border-radius: 10px; padding: 12px; min-height: 180px; max-height: 420px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; margin: 0 0 10px; }
+  .respuesta { display: flex; gap: 8px; }
+  .respuesta input { flex: 1; }
   ol li { margin-bottom: 6px; }
   .barra { position: fixed; left: 0; right: 0; bottom: 0; background: var(--tarjeta); border-top: 1px solid var(--borde); padding: 12px 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; box-shadow: 0 -4px 16px rgba(0,0,0,.08); z-index: 10; }
   .barra button { flex: 1 1 200px; max-width: 320px; }
@@ -200,6 +203,17 @@
         <li>Copia tu CV en <code>Linkd/perfil/</code> con el nombre que escribiste arriba.</li>
         <li>En la Terminal: <code>cd ~/Documents/GitHub/Linkd && npm run login</code> (una vez) y luego <code>npm start</code>.</li>
       </ol>
+      <section id="seccionEjecucion" hidden>
+        <h2>Ejecución</h2>
+        <pre id="registro"></pre>
+        <form id="formRespuesta" class="respuesta" autocomplete="off">
+          <input type="text" id="respuesta" placeholder="Si Linkd te pregunta algo, escríbelo aquí y pulsa Enviar">
+          <button type="submit">Enviar</button>
+        </form>
+        <div class="botones" style="margin:10px 0 0">
+          <button type="button" id="parar" class="secundario">Parar (guarda el informe)</button>
+        </div>
+      </section>
       <details>
         <summary>Vista previa de config.json</summary>
         <pre id="vistaConfig"></pre>
@@ -359,6 +373,32 @@ $('guardarBorrador').addEventListener('click', guardarBorrador)
 const esPanelLocal = ['127.0.0.1', 'localhost'].includes(location.hostname) && location.port === '4321'
 if (esPanelLocal) {
   $('barraLocal').hidden = false
+  // La salida del programa llega en directo desde el panel local.
+  const registro = $('registro')
+  const limpiar = (t) => t.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+  function conectarSalida() {
+    const fuente = new EventSource('/eventos')
+    fuente.onmessage = (e) => {
+      const cerca = registro.scrollTop + registro.clientHeight >= registro.scrollHeight - 40
+      registro.textContent += limpiar(JSON.parse(e.data))
+      if (cerca) registro.scrollTop = registro.scrollHeight
+    }
+  }
+  const avisar = async (ruta, cuerpo) => {
+    const r = await fetch(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo ?? {}) })
+    const datos = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(datos.error ?? `error ${r.status}`)
+    return datos
+  }
+  $('formRespuesta').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const texto = $('respuesta').value
+    try { await avisar('/responder', { texto }); $('respuesta').value = '' }
+    catch (err) { mostrar(`❌ ${err.message}`, true) }
+  })
+  $('parar').addEventListener('click', async () => {
+    try { await avisar('/parar') } catch (err) { mostrar(`❌ ${err.message}`, true) }
+  })
   // El resultado se ve en la propia página (no en un aviso que el navegador podría bloquear).
   const mostrar = (texto, error = false) => {
     $('estado').textContent = texto
@@ -377,12 +417,17 @@ if (esPanelLocal) {
   })
   $('ejecutarLocal').addEventListener('click', async () => {
     if (!(await guardarEnLinkd())) return
-    mostrar('Abriendo la Terminal…')
-    const r = await fetch('/ejecutar', { method: 'POST' })
-    const datos = await r.json().catch(() => ({}))
-    if (!r.ok) return mostrar(`❌ ${datos.error ?? 'no se pudo abrir la Terminal'}`, true)
-    mostrar('✅ Linkd se está ejecutando en una ventana de Terminal. Responde allí a lo que te pregunte.')
+    try {
+      await avisar('/ejecutar')
+      $('seccionEjecucion').hidden = false
+      $('seccionEjecucion').scrollIntoView({ behavior: 'smooth' })
+      mostrar('✅ Linkd se está ejecutando aquí abajo. Si te pregunta algo, respóndele en el campo de Ejecución.')
+    } catch (err) {
+      $('seccionEjecucion').hidden = false
+      mostrar(`❌ ${err.message}`, true)
+    }
   })
+  conectarSalida()
 }
 </script>
 </body>
