@@ -225,7 +225,12 @@ async function main() {
   const [esperaMin, esperaMax] = config.segundosEntreOfertas ?? [20, 60]
   const max = config.maxPorEjecucion ?? 15
 
-  console.log(`Modo: ${modo}. Máximo ${max} solicitudes en esta ejecución.`)
+  const describirModo = {
+    prueba: 'PRUEBA: rellena pero no envía nada',
+    auto: 'AUTOMÁTICO: envía solo y salta las ofertas a las que les falten datos',
+    revisar: config.confirmarEnvio === false ? 'NORMAL: envía sin preguntar; solo te pregunta los datos que falten' : 'NORMAL: te pide confirmación antes de cada envío',
+  }[modo]
+  console.log(`Modo ${describirModo}. Máximo ${max} solicitudes en esta ejecución.`)
   const { pagina, cerrar } = await li.abrirNavegador(config.navegador)
   cerrarNavegador = cerrar
   process.on('SIGINT', async () => {
