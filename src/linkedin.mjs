@@ -129,6 +129,8 @@ export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, s
 
     const encontrados = await pagina.evaluate(() =>
       [...document.querySelectorAll('[data-occludable-job-id], [data-job-id]')]
+        // Las que ya solicitaste salen marcadas "Solicitado": ni se abren.
+        .filter((el) => !/\b(solicitado|applied)\b/i.test(el.innerText ?? ''))
         .map((el) => el.getAttribute('data-occludable-job-id') || el.getAttribute('data-job-id'))
         .filter((id) => /^\d+$/.test(id)),
     )
