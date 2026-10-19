@@ -1,8 +1,8 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { cargarPerfil, perfilLinkedIn } from './perfil.mjs'
-import { evaluarOferta, responderCampos } from './claude.mjs'
+import { evaluarOferta, responderCampos, sugerirBusquedas } from './claude.mjs'
 import * as li from './linkedin.mjs'
 import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
 import { generarInforme } from './informe.mjs'
@@ -238,7 +238,19 @@ async function main() {
   let enviadas = 0
   // --oferta <id>: solo esa oferta, sin buscar (para repetir una concreta).
   const unaOferta = args.includes('--oferta') ? args[args.indexOf('--oferta') + 1] : null
-  const busquedas = unaOferta ? [{ palabras: `oferta ${unaOferta}`, id: unaOferta }] : (config.busquedas ?? [])
+  let busquedas = unaOferta ? [{ palabras: `oferta ${unaOferta}`, id: unaOferta }] : (config.busquedas ?? [])
+  // "busquedas": "auto" → las propone Claude a partir de tu perfil (se guardan
+  // en perfil/.busquedas.json; bórralo para que proponga otras).
+  if (busquedas === 'auto') {
+    const cache = 'perfil/.busquedas.json'
+    let palabras = await readFile(cache, 'utf8').then(JSON.parse, () => null)
+    if (!palabras) {
+      palabras = await sugerirBusquedas(perfil)
+      await writeFile(cache, JSON.stringify(palabras, null, 2))
+    }
+    console.log(`Búsquedas a partir de tu perfil: ${palabras.join(' · ')}`)
+    busquedas = palabras.map((p) => ({ palabras: p, ubicacion: config.ubicacion ?? 'España' }))
+  }
 
   buscar: for (const busqueda of busquedas) {
     console.log(`\n🔎 ${busqueda.palabras} — ${busqueda.ubicacion ?? ''}`)

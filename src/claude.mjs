@@ -54,6 +54,28 @@ const describirOferta = (oferta) =>
   `<oferta>\nPuesto: ${oferta.puesto}\nEmpresa: ${oferta.empresa}\nUbicación: ${oferta.ubicacion}\n\n${oferta.descripcion}\n</oferta>`
 
 /**
+ * Búsquedas de LinkedIn a partir del perfil: títulos de puesto reales que
+ * encajan con lo que sabe, como los escribiría una empresa en una oferta.
+ */
+export async function sugerirBusquedas(perfil, cuantas = 8) {
+  const { busquedas } = await pedirJSON(
+    perfil,
+    `Propón ${cuantas} búsquedas de empleo para LinkedIn que encuentren ofertas a las que esta candidata pueda optar, según su CV, su perfil de LinkedIn, su portfolio y lo que busca (puesto_que_busca).
+- Cada búsqueda: 2–4 palabras, un título de puesto como lo escribiría una empresa (por ejemplo "desarrollador python junior", "data analyst", "desarrollador full stack"), en español o en inglés según se use más en España para ese puesto.
+- Ordénalas de más a menos encaje.
+- Céntrate en lo que ya sabe hacer (sus lenguajes y herramientas) y en datos e IA. Nada de puestos senior ni de otros campos.`,
+    {
+      type: 'object',
+      properties: { busquedas: { type: 'array', items: { type: 'string' } } },
+      required: ['busquedas'],
+      additionalProperties: false,
+    },
+    'low',
+  )
+  return busquedas.slice(0, cuantas)
+}
+
+/**
  * ¿Qué probabilidad hay de que la llamen? Puntuación 0–10, y las
  * características de la oferta para el informe.
  */

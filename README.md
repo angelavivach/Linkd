@@ -116,7 +116,8 @@ npm run auto
 | `sobreMi` | Ruta a tus datos extra |
 | `portfolio` | URL de tu portfolio. Se descarga una vez en `perfil/.portfolio.txt`; bórralo si lo actualizas |
 | `objetivo` | El tipo de puesto que buscas. Lo que no tenga que ver puntúa como máximo 2 |
-| `busquedas` | Lista de `{ "palabras", "ubicacion" }` |
+| `busquedas` | `"auto"`: las propone Claude a partir de tu perfil (se guardan en `perfil/.busquedas.json`; bórralo para que proponga otras). O una lista de `{ "palabras", "ubicacion" }` |
+| `ubicacion` | Dónde buscar con `"busquedas": "auto"` |
 | `nivelExperiencia` | Niveles de LinkedIn: `1` prácticas, `2` sin experiencia, `3` junior, `4` intermedio-senior |
 | `orden` | `relevancia` o `fecha` |
 | `soloUltimosDias` | Solo ofertas publicadas en los últimos N días |

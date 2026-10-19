@@ -5,25 +5,27 @@
   "cv": "perfil/cv.pdf",
   "sobreMi": "perfil/sobre-mi.md",
   "portfolio": "https://angelavivach.github.io",
-
   "objetivo": "Desarrolladora de Aplicaciones Multiplataforma · Data Science & IA",
-  "busquedas": [
-    {"palabras": "desarrollador aplicaciones multiplataforma", "ubicacion": "España"},
-    {"palabras": "data scientist junior", "ubicacion": "España"},
-    {"palabras": "inteligencia artificial junior", "ubicacion": "España"},
-    {"palabras": "machine learning junior", "ubicacion": "España"},
-    {"palabras": "python developer junior", "ubicacion": "España"},
-    {"palabras": "data analyst junior", "ubicacion": "España"}
+  "busquedas": "auto",
+  "ubicacion": "España",
+  "nivelExperiencia": [
+    1,
+    2,
+    3
   ],
-  "nivelExperiencia": [1, 2, 3],
   "orden": "relevancia",
   "soloUltimosDias": 14,
   "paginasPorBusqueda": 2,
-
   "maxPorEjecucion": 15,
   "puntuacionMinima": 2,
   "excluirEmpresas": [],
-  "excluirPalabrasEnTitulo": ["senior", "lead", "principal"],
-
-  "segundosEntreOfertas": [20, 60]
+  "excluirPalabrasEnTitulo": [
+    "senior",
+    "lead",
+    "principal"
+  ],
+  "segundosEntreOfertas": [
+    20,
+    60
+  ]
 }
