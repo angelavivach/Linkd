@@ -21,3 +21,4 @@ cuentas.json
 # El CV, esté donde esté
 *.pdf
 .DS_Store
+linkd.log

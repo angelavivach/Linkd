@@ -344,6 +344,10 @@ async function main() {
 
 let cerrarNavegador
 
+// Que nunca termine en silencio: cualquier fallo no capturado se ve y se registra.
+process.on('unhandledRejection', (e) => console.error(`\n❌ Error inesperado: ${e?.stack ?? e}`))
+process.on('exit', (codigo) => { if (codigo) console.error(`(Linkd terminó con código ${codigo})`) })
+
 main().catch(async (e) => {
   console.error(`\n❌ ${e.message}`)
   await cerrarNavegador?.().catch(() => {})
