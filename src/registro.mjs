@@ -8,7 +8,8 @@ const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
 /**
  * IDs de ofertas que ya pasaron por aquí, para no repetirlas. Las que dieron
- * error no cuentan: se vuelven a intentar en la siguiente ejecución.
+ * error, se quedaron en prueba o necesitaban ayuda no cuentan: se vuelven a
+ * intentar en la siguiente ejecución.
  */
 export async function ofertasVistas() {
   if (!(await existe(CSV))) return new Set()
@@ -16,7 +17,7 @@ export async function ofertasVistas() {
   const vistas = new Set()
   for (const fila of filas) {
     const [, id, , , estado] = [...fila.matchAll(/"((?:[^"]|"")*)"/g)].map((m) => m[1])
-    if (id && estado !== 'error') vistas.add(id)
+    if (id && !['error', 'prueba', 'necesita ayuda'].includes(estado)) vistas.add(id)
   }
   return vistas
 }
