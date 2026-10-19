@@ -165,6 +165,12 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
 
     errores = await li.erroresVisibles(modal)
     const avanzo = (await li.firmaPaso(modal)) !== antes
+    // Si después de dos intentos sigue sin avanzar, el agente de Claude se
+    // encarga del formulario tal cual lo ve (campos raros, fechas, ubicaciones…).
+    if (!avanzo && reintentos >= 1) {
+      console.log('   🤖 El formulario no avanza: lo termina el agente de Claude')
+      return solicitarEnWeb(pagina, oferta, { perfil, config, modo, preguntar, enLinkedIn: true })
+    }
     if (errores.length || !avanzo) {
       if (!errores.length) errores = ['El formulario no avanzó al pulsar Siguiente: falta o es incorrecta alguna respuesta de este paso.']
       console.log(`   LinkedIn se queja: ${errores.join(' · ')}`)
