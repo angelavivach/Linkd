@@ -68,6 +68,7 @@ Para no escribir `config.json` a mano, abre **`web/index.html`** en el navegador
 - El CV no se sube. Cópialo tú en `perfil/` con el nombre que pusiste.
 - Tu sesión de LinkedIn y tu Claude siguen siendo solo tuyos, en tu ordenador.
 - Para publicarlo en Render, `render.yaml` ya lo describe como sitio estático.
+- **En tu ordenador**, `npm run panel` abre el mismo formulario con dos botones extra: **Guardar en Linkd** (escribe los archivos en su sitio) y **Guardar y ejecutar Linkd** (los guarda y abre una Terminal con el programa). El panel solo escucha en tu Mac.
 
 ## Puesta en marcha
 

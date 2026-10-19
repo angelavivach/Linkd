@@ -45,6 +45,10 @@
   <div class="barra">
     <button type="button" id="barraConfig">Descargar config.json</button>
     <button type="button" id="barraSobreMi" class="secundario">Descargar sobre-mi.md</button>
+    <span id="barraLocal" hidden style="display:contents">
+      <button type="button" id="guardarLocal">Guardar en Linkd</button>
+      <button type="button" id="ejecutarLocal">Guardar y ejecutar Linkd</button>
+    </span>
   </div>
 
   <form id="formulario" autocomplete="off">
@@ -349,6 +353,29 @@ $('descargarSobreMi').addEventListener('click', () => comprobarYDescargar(() =>
 $('barraConfig').addEventListener('click', () => $('descargarConfig').click())
 $('barraSobreMi').addEventListener('click', () => $('descargarSobreMi').click())
 $('guardarBorrador').addEventListener('click', guardarBorrador)
+
+// Solo en el panel local (npm run panel): guardar y ejecutar en este ordenador.
+const esPanelLocal = ['127.0.0.1', 'localhost'].includes(location.hostname) && location.port === '4321'
+if (esPanelLocal) {
+  $('barraLocal').hidden = false
+  async function guardarEnLinkd() {
+    const errores = avisos()
+    if (errores.length && !confirm(`Antes de guardar:\n\n- ${errores.join('\n- ')}\n\n¿Guardar igualmente?`)) return false
+    const r = await fetch('/guardar', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ config: construirConfig(), sobreMi: construirSobreMi() }) })
+    const datos = await r.json()
+    if (!r.ok) { alert(`No se pudo guardar: ${datos.error}`); return false }
+    return true
+  }
+  $('guardarLocal').addEventListener('click', async () => {
+    if (await guardarEnLinkd()) alert('Guardado: config.json en Linkd y sobre-mi.md en perfil/.')
+  })
+  $('ejecutarLocal').addEventListener('click', async () => {
+    if (!(await guardarEnLinkd())) return
+    await fetch('/ejecutar', { method: 'POST' })
+    alert('Se ha abierto una Terminal con Linkd. Responde allí a lo que te pregunte.')
+  })
+}
 </script>
 </body>
 </html>
