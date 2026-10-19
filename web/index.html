@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linkd · Configuración</title>
+<style>
+  :root { --fondo: #f6f5f2; --tarjeta: #ffffff; --texto: #1d1d1f; --suave: #6b6b70; --borde: #dcdad4; --acento: #0a66c2; --aviso: #fff4d6; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --fondo: #141416; --tarjeta: #1d1d20; --texto: #ececee; --suave: #9a9aa0; --borde: #2e2e33; --acento: #5aa9f0; --aviso: #3a3320; }
+  }
+  :root[data-theme="dark"] { --fondo: #141416; --tarjeta: #1d1d20; --texto: #ececee; --suave: #9a9aa0; --borde: #2e2e33; --acento: #5aa9f0; --aviso: #3a3320; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  section { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .aviso { background: var(--aviso); border-radius: 10px; padding: 12px 14px; margin: 14px 0 18px; font-size: 14px; }
+  .ayuda { color: var(--suave); font-size: 13px; margin: -6px 0 10px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 4px; }
+  label.lin { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin: 4px 14px 4px 0; }
+  input[type=text], input[type=email], input[type=url], input[type=number], select, textarea {
+    width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px;
+    background: var(--fondo); color: var(--texto); font: inherit;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  .doble { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .doble { grid-template-columns: 1fr; } }
+  .botones { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 20px; }
+  button { border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 600; cursor: pointer; background: var(--acento); color: #fff; }
+  button.secundario { background: transparent; color: var(--acento); border: 1px solid var(--acento); }
+  pre { background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 12px; overflow: auto; font-size: 12px; max-height: 320px; white-space: pre-wrap; }
+  details summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+  ol li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Configura Linkd</h1>
+  <p class="aviso"><strong>Todo se queda en tu navegador.</strong> Esta página no envía nada a ningún servidor. Tu CV, tu sesión de LinkedIn y tu clave de Claude nunca pasan por aquí: solo generas dos archivos que guardas en tu ordenador.</p>
+
+  <form id="formulario" autocomplete="off">
+
+    <section>
+      <h2>1. Contacto</h2>
+      <div class="doble">
+        <div><label for="nombre">Nombre y apellidos</label><input type="text" id="nombre"></div>
+        <div><label for="email">Email (para registrarte en las webs de empresa)</label><input type="email" id="email"></div>
+        <div><label for="telefono">Teléfono</label><input type="text" id="telefono" placeholder="+34 ..."></div>
+        <div><label for="ciudad">Ciudad</label><input type="text" id="ciudad"></div>
+        <div><label for="linkedin">Perfil de LinkedIn</label><input type="url" id="linkedin" placeholder="https://www.linkedin.com/in/..."></div>
+        <div><label for="github">GitHub (opcional)</label><input type="url" id="github"></div>
+      </div>
+      <label for="portfolio">Portfolio (opcional)</label>
+      <input type="url" id="portfolio" placeholder="https://...">
+    </section>
+
+    <section>
+      <h2>2. Qué buscas</h2>
+      <label for="objetivo">Puesto que buscas, en una frase</label>
+      <input type="text" id="objetivo" placeholder="Ej.: Desarrollador/a de aplicaciones · Data Science e IA">
+      <p class="ayuda">Claude lo usa para decidir si una oferta te encaja.</p>
+
+      <label for="busquedas">Búsquedas en LinkedIn (una por línea)</label>
+      <textarea id="busquedas" placeholder="desarrollador python junior | España&#10;data analyst junior | España"></textarea>
+      <p class="ayuda">Déjalo vacío y Linkd propondrá las búsquedas a partir de tu CV y tu perfil de LinkedIn.</p>
+
+      <div class="doble">
+        <div>
+          <label for="ubicacion">Ubicación por defecto</label>
+          <input type="text" id="ubicacion" value="España">
+        </div>
+        <div>
+          <label for="orden">Orden de resultados</label>
+          <select id="orden"><option value="relevancia">Relevancia</option><option value="fecha">Más recientes</option></select>
+        </div>
+        <div>
+          <label for="dias">Ofertas de los últimos… días</label>
+          <input type="number" id="dias" min="1" value="14">
+        </div>
+        <div>
+          <label for="paginas">Páginas de resultados por búsqueda</label>
+          <input type="number" id="paginas" min="1" max="10" value="2">
+        </div>
+      </div>
+
+      <label>Nivel de experiencia de las ofertas</label>
+      <label class="lin"><input type="checkbox" name="nivel" value="1"> Prácticas</label>
+      <label class="lin"><input type="checkbox" name="nivel" value="2" checked> Sin experiencia</label>
+      <label class="lin"><input type="checkbox" name="nivel" value="3" checked> Junior</label>
+      <label class="lin"><input type="checkbox" name="nivel" value="4"> Intermedio / senior</label>
+
+      <label for="excluirTitulo">Palabras que excluyen una oferta si aparecen en el título</label>
+      <input type="text" id="excluirTitulo" value="senior, lead, principal">
+      <label for="excluirEmpresas">Empresas que no quieres (separadas por comas)</label>
+      <input type="text" id="excluirEmpresas" placeholder="Empresa A, Empresa B">
+    </section>
+
+    <section>
+      <h2>3. Tu situación (lo que preguntan las empresas)</h2>
+      <div class="doble">
+        <div>
+          <label for="permiso">¿Tienes permiso de trabajo en la UE?</label>
+          <select id="permiso"><option>sí</option><option>no</option></select>
+        </div>
+        <div>
+          <label for="visado">¿Necesitas patrocinio de visado?</label>
+          <select id="visado"><option>no</option><option>sí</option></select>
+        </div>
+        <div>
+          <label for="disponibilidad">Disponibilidad / preaviso</label>
+          <input type="text" id="disponibilidad" placeholder="Inmediata, 15 días…">
+        </div>
+        <div>
+          <label for="modalidad">Modalidad que prefieres</label>
+          <select id="modalidad"><option>remoto</option><option>híbrido</option><option>presencial</option><option>cualquiera</option></select>
+        </div>
+        <div>
+          <label for="mudarse">¿Dispuesto/a a mudarte?</label>
+          <select id="mudarse"><option>no</option><option>sí</option><option>depende de la oferta</option></select>
+        </div>
+        <div>
+          <label for="carnet">¿Carnet de conducir?</label>
+          <select id="carnet"><option>no</option><option>sí</option></select>
+        </div>
+      </div>
+
+      <label for="salario">Expectativa salarial bruta anual (€)</label>
+      <input type="text" id="salario" placeholder="Ej.: 26000">
+
+      <label for="idiomas">Idiomas y nivel</label>
+      <textarea id="idiomas" placeholder="Español: nativo&#10;Inglés: B1"></textarea>
+
+      <label for="tecnologias">Años de experiencia por tecnología (una por línea)</label>
+      <textarea id="tecnologias" placeholder="Python: 2&#10;JavaScript: 3&#10;React: 1"></textarea>
+      <p class="ayuda">Las empresas lo preguntan mucho. Pon números enteros.</p>
+
+      <label for="conocio">¿Cómo sueles conocer las ofertas?</label>
+      <input type="text" id="conocio" value="LinkedIn">
+      <label for="diversidad">Género / diversidad (lo que quieras que se responda)</label>
+      <input type="text" id="diversidad" value="prefiero no decirlo">
+    </section>
+
+    <section>
+      <h2>4. Tu CV y ajustes</h2>
+      <label for="cvNombre">Nombre del archivo de tu CV (PDF con texto)</label>
+      <input type="text" id="cvNombre" placeholder="mi_cv.pdf">
+      <p class="ayuda">Después, copia el PDF a la carpeta <code>perfil/</code> de Linkd. El CV no se sube a ningún sitio.</p>
+
+      <div class="doble">
+        <div>
+          <label for="navegador">Navegador</label>
+          <select id="navegador"><option value="brave">Brave</option><option value="chrome">Chrome</option><option value="chromium">Chromium</option></select>
+        </div>
+        <div>
+          <label for="max">Solicitudes máximas por ejecución</label>
+          <input type="number" id="max" min="1" value="15">
+        </div>
+        <div>
+          <label for="minimo">Probabilidad mínima (0–10)</label>
+          <input type="number" id="minimo" min="0" max="10" value="2">
+        </div>
+        <div>
+          <label for="pausaMin">Pausa entre solicitudes: mínimo (s)</label>
+          <input type="number" id="pausaMin" min="5" value="20">
+        </div>
+        <div>
+          <label for="pausaMax">Pausa entre solicitudes: máximo (s)</label>
+          <input type="number" id="pausaMax" min="5" value="60">
+        </div>
+      </div>
+
+      <label class="lin"><input type="checkbox" id="webEmpresa" checked> Solicitar también en la web de cada empresa (creando cuenta si hace falta)</label><br>
+      <label class="lin"><input type="checkbox" id="confirmar" checked> Pedirme confirmación antes de cada envío</label>
+    </section>
+
+    <section>
+      <h2>5. Descarga tus archivos</h2>
+      <div class="botones">
+        <button type="button" id="descargarConfig">Descargar config.json</button>
+        <button type="button" id="descargarSobreMi" class="secundario">Descargar sobre-mi.md</button>
+        <button type="button" id="guardarBorrador" class="secundario">Guardar borrador en este navegador</button>
+      </div>
+      <ol>
+        <li>Guarda <strong>config.json</strong> en la carpeta <code>Linkd</code>, reemplazando el que haya.</li>
+        <li>Guarda <strong>sobre-mi.md</strong> dentro de <code>Linkd/perfil/</code>.</li>
+        <li>Copia tu CV en <code>Linkd/perfil/</code> con el nombre que escribiste arriba.</li>
+        <li>En la Terminal: <code>cd ~/Documents/GitHub/Linkd && npm run login</code> (una vez) y luego <code>npm start</code>.</li>
+      </ol>
+      <details>
+        <summary>Vista previa de config.json</summary>
+        <pre id="vistaConfig"></pre>
+      </details>
+      <details>
+        <summary>Vista previa de sobre-mi.md</summary>
+        <pre id="vistaSobreMi"></pre>
+      </details>
+    </section>
+  </form>
+</main>
+
+<script>
+const BORRADOR = 'linkd-borrador'
+const $ = (id) => document.getElementById(id)
+const val = (id) => $(id).value.trim()
+const lineas = (id) => val(id).split('\n').map((s) => s.trim()).filter(Boolean)
+const separadas = (id) => val(id).split(',').map((s) => s.trim()).filter(Boolean)
+const CAMPOS = ['nombre', 'email', 'telefono', 'ciudad', 'linkedin', 'github', 'portfolio', 'objetivo', 'busquedas', 'ubicacion', 'orden', 'dias', 'paginas', 'excluirTitulo', 'excluirEmpresas', 'permiso', 'visado', 'disponibilidad', 'modalidad', 'mudarse', 'carnet', 'salario', 'idiomas', 'tecnologias', 'conocio', 'diversidad', 'cvNombre', 'navegador', 'max', 'minimo', 'pausaMin', 'pausaMax']
+const CASILLAS = ['webEmpresa', 'confirmar']
+
+function construirConfig() {
+  const niveles = [...document.querySelectorAll('input[name=nivel]:checked')].map((i) => Number(i.value))
+  const manuales = lineas('busquedas').map((l) => {
+    const [palabras, ubicacion] = l.split('|').map((s) => s.trim())
+    return { palabras, ubicacion: ubicacion || val('ubicacion') || 'España' }
+  }).filter((b) => b.palabras)
+  const pausaMin = Number(val('pausaMin')) || 20
+  const pausaMax = Math.max(pausaMin, Number(val('pausaMax')) || 60)
+  return {
+    navegador: val('navegador'),
+    email: val('email'),
+    webEmpresa: $('webEmpresa').checked,
+    cv: `perfil/${val('cvNombre')}`,
+    sobreMi: 'perfil/sobre-mi.md',
+    portfolio: val('portfolio'),
+    objetivo: val('objetivo'),
+    busquedas: manuales.length ? manuales : 'auto',
+    ubicacion: val('ubicacion') || 'España',
+    nivelExperiencia: niveles,
+    orden: val('orden'),
+    soloUltimosDias: Number(val('dias')) || 14,
+    paginasPorBusqueda: Number(val('paginas')) || 1,
+    maxPorEjecucion: Number(val('max')) || 15,
+    confirmarEnvio: $('confirmar').checked,
+    puntuacionMinima: Number(val('minimo')) || 0,
+    excluirEmpresas: separadas('excluirEmpresas'),
+    excluirPalabrasEnTitulo: separadas('excluirTitulo'),
+    segundosEntreOfertas: [pausaMin, pausaMax],
+  }
+}
+
+function construirSobreMi() {
+  const tecnologias = lineas('tecnologias').map((l) => `- ${l}`).join('\n') || '- ...'
+  const idiomas = lineas('idiomas').map((l) => `- ${l}`).join('\n') || '- ...'
+  const sinDato = (v) => v || 'no indicado'
+  return `# Sobre mí — datos que no están en el CV
+
+Generado con el configurador de Linkd. Claude lo usa, junto con el CV y el portfolio,
+para responder los formularios. Lo que no esté aquí ni en el CV no se inventa.
+
+## Contacto
+- Nombre: ${sinDato(val('nombre'))}
+- Teléfono: ${sinDato(val('telefono'))}
+- Ciudad: ${sinDato(val('ciudad'))}
+- Email: ${sinDato(val('email'))}
+- LinkedIn: ${sinDato(val('linkedin'))}
+- GitHub: ${sinDato(val('github'))}
+
+## Situación
+- Permiso de trabajo en la UE: ${val('permiso')}
+- ¿Necesito patrocinio de visado?: ${val('visado')}
+- Disponibilidad / preaviso: ${sinDato(val('disponibilidad'))}
+- Modalidad que prefiero: ${val('modalidad')}
+- ¿Dispuesto/a a mudarme?: ${val('mudarse')}
+- ¿Carnet de conducir?: ${val('carnet')}
+
+## Salario
+- Expectativa salarial bruta anual: ${val('salario') ? `${val('salario')} € (si piden un número, usar este)` : 'no indicada (preguntar)'}
+
+## Idiomas
+${idiomas}
+
+## Años de experiencia por tecnología
+(Números enteros.)
+${tecnologias}
+
+## Otras respuestas habituales
+- ¿Cómo conociste la oferta?: ${sinDato(val('conocio'))}
+- Género / diversidad: ${sinDato(val('diversidad'))}
+`
+}
+
+function actualizarVistas() {
+  $('vistaConfig').textContent = JSON.stringify(construirConfig(), null, 2)
+  $('vistaSobreMi').textContent = construirSobreMi()
+}
+
+function descargar(nombre, texto, tipo) {
+  const url = URL.createObjectURL(new Blob([texto], { type: tipo }))
+  const a = Object.assign(document.createElement('a'), { href: url, download: nombre })
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function avisos() {
+  const errores = []
+  if (!val('nombre')) errores.push('Pon tu nombre.')
+  if (!val('email')) errores.push('Pon tu email: lo necesita Linkd para registrarse en las webs de empresa.')
+  if (!val('cvNombre')) errores.push('Pon el nombre del archivo de tu CV.')
+  else if (!/\.pdf$/i.test(val('cvNombre'))) errores.push('El CV tiene que ser un PDF.')
+  if (!document.querySelectorAll('input[name=nivel]:checked').length) errores.push('Marca al menos un nivel de experiencia.')
+  return errores
+}
+
+function comprobarYDescargar(fn) {
+  const errores = avisos()
+  if (errores.length && !confirm(`Antes de descargar:\n\n- ${errores.join('\n- ')}\n\n¿Descargar igualmente?`)) return
+  fn()
+}
+
+// El borrador vive solo en este navegador (localStorage); si el navegador lo bloquea, no pasa nada.
+function guardarBorrador() {
+  const datos = { campos: {}, casillas: {}, niveles: [...document.querySelectorAll('input[name=nivel]:checked')].map((i) => i.value) }
+  CAMPOS.forEach((c) => (datos.campos[c] = $(c).value))
+  CASILLAS.forEach((c) => (datos.casillas[c] = $(c).checked))
+  try { localStorage.setItem(BORRADOR, JSON.stringify(datos)); alert('Borrador guardado en este navegador.') }
+  catch { alert('Este navegador no permite guardar borradores. Descarga los archivos para no perder nada.') }
+}
+
+function cargarBorrador() {
+  try {
+    const datos = JSON.parse(localStorage.getItem(BORRADOR) || 'null')
+    if (!datos) return
+    CAMPOS.forEach((c) => { if (datos.campos[c] !== undefined) $(c).value = datos.campos[c] })
+    CASILLAS.forEach((c) => { if (datos.casillas[c] !== undefined) $(c).checked = datos.casillas[c] })
+    document.querySelectorAll('input[name=nivel]').forEach((i) => (i.checked = datos.niveles.includes(i.value)))
+  } catch { /* borrador ilegible: se ignora */ }
+}
+
+cargarBorrador()
+actualizarVistas()
+$('formulario').addEventListener('input', actualizarVistas)
+$('formulario').addEventListener('change', actualizarVistas)
+$('formulario').addEventListener('submit', (e) => e.preventDefault())
+$('descargarConfig').addEventListener('click', () => comprobarYDescargar(() =>
+  descargar('config.json', JSON.stringify(construirConfig(), null, 2) + '\n', 'application/json')))
+$('descargarSobreMi').addEventListener('click', () => comprobarYDescargar(() =>
+  descargar('sobre-mi.md', construirSobreMi(), 'text/markdown')))
+$('guardarBorrador').addEventListener('click', guardarBorrador)
+</script>
+</body>
+</html>

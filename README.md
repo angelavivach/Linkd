@@ -58,6 +58,17 @@ herramientas limitado a ese navegador.
 - El texto de las webs se trata como información, no como órdenes: si una página
   intenta que haga otra cosa, se para y te avisa.
 
+## Configurador web
+
+Para no escribir `config.json` a mano, abre **`web/index.html`** en el navegador
+(o la dirección del configurador en Render). Rellenas tus datos, descargas
+`config.json` y `sobre-mi.md`, y los guardas en tu carpeta de Linkd.
+
+- Todo se queda en tu navegador: la página no envía nada a ningún servidor.
+- El CV no se sube. Cópialo tú en `perfil/` con el nombre que pusiste.
+- Tu sesión de LinkedIn y tu Claude siguen siendo solo tuyos, en tu ordenador.
+- Para publicarlo en Render, `render.yaml` ya lo describe como sitio estático.
+
 ## Puesta en marcha
 
 Necesitas Node 22 o superior y **Claude Code con tu sesión iniciada** en este Mac
