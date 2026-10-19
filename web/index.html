@@ -201,10 +201,13 @@
         <li>Guarda <strong>config.json</strong> en la carpeta <code>Linkd</code>, reemplazando el que haya.</li>
         <li>Guarda <strong>sobre-mi.md</strong> dentro de <code>Linkd/perfil/</code>.</li>
         <li>Copia tu CV en <code>Linkd/perfil/</code> con el nombre que escribiste arriba.</li>
-        <li>En la Terminal: <code>cd ~/Documents/GitHub/Linkd && npm run login</code> (una vez) y luego <code>npm start</code>.</li>
+        <li><strong>Iniciar sesión en LinkedIn</strong> (solo la primera vez) y luego <strong>Guardar y ejecutar Linkd</strong>. Ambos botones están en el panel local (<code>npm run panel</code>), no en esta página publicada.</li>
       </ol>
       <section id="seccionEjecucion" hidden>
         <h2>Ejecución</h2>
+        <div class="botones">
+          <button type="button" id="loginLocal" class="secundario">Iniciar sesión en LinkedIn (solo la primera vez)</button>
+        </div>
         <pre id="registro"></pre>
         <form id="formRespuesta" class="respuesta" autocomplete="off">
           <input type="text" id="respuesta" placeholder="Si Linkd te pregunta algo, escríbelo aquí y pulsa Enviar">
@@ -415,10 +418,17 @@ if (esPanelLocal) {
   $('guardarLocal').addEventListener('click', async () => {
     if (await guardarEnLinkd()) mostrar('✅ Guardado: config.json en Linkd y sobre-mi.md en perfil/.')
   })
+  $('loginLocal').addEventListener('click', async () => {
+    $('seccionEjecucion').hidden = false
+    try {
+      await avisar('/ejecutar', { orden: 'login' })
+      mostrar('Se ha abierto Brave para iniciar sesión. Entra en LinkedIn y, cuando veas tu inicio, ciérralo con Cmd+Q. Aquí verás la confirmación.')
+    } catch (err) { mostrar(`❌ ${err.message}`, true) }
+  })
   $('ejecutarLocal').addEventListener('click', async () => {
     if (!(await guardarEnLinkd())) return
     try {
-      await avisar('/ejecutar')
+      await avisar('/ejecutar', { orden: 'start' })
       $('seccionEjecucion').hidden = false
       $('seccionEjecucion').scrollIntoView({ behavior: 'smooth' })
       mostrar('✅ Linkd se está ejecutando aquí abajo. Si te pregunta algo, respóndele en el campo de Ejecución.')

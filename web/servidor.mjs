@@ -63,10 +63,14 @@ const servidor = createServer(async (req, res) => {
 
   // Ejecuta el programa dentro de este panel: su salida llega a la página y
   // sus preguntas se responden allí (por stdin).
+  // "start" busca y solicita; "login" abre LinkedIn para iniciar sesión (una vez).
+  const ORDENES = { start: [], login: ['login'] }
   if (req.method === 'POST' && req.url === '/ejecutar') {
     if (proceso) return responder(res, 409, { error: 'Linkd ya está en marcha.' })
-    proceso = spawn('node', ['src/index.mjs'], { cwd: RAIZ, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] })
-    emitir(`▶ Linkd arrancado (${new Date().toLocaleTimeString('es-ES')})\n`)
+    const { orden = 'start' } = await leerCuerpo(req).catch(() => ({}))
+    if (!(orden in ORDENES)) return responder(res, 400, { error: 'orden desconocida' })
+    proceso = spawn('node', ['src/index.mjs', ...ORDENES[orden]], { cwd: RAIZ, env: process.env, stdio: ['pipe', 'pipe', 'pipe'] })
+    emitir(`▶ ${orden === 'login' ? 'Inicio de sesión en LinkedIn' : 'Linkd'} arrancado (${new Date().toLocaleTimeString('es-ES')})\n`)
     proceso.stdout.on('data', (d) => emitir(d.toString()))
     proceso.stderr.on('data', (d) => emitir(d.toString()))
     proceso.on('exit', (codigo) => {
