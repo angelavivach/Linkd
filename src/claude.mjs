@@ -64,7 +64,10 @@ export function evaluarOferta(perfil, oferta) {
     perfil,
     `${describirOferta(oferta)}
 
-Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Indica además en "relacionada" si el puesto tiene relación con lo que sabe hacer según su CV, su perfil de LinkedIn y su portfolio, o con lo que busca (puesto_que_busca), aunque no cumpla todos los requisitos o la probabilidad sea baja. Un puesto de otro campo (hardware, ventas, otra ingeniería…) no está relacionado. Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
+Evalúa de 0 a 10 la probabilidad realista de que la candidata pase el primer filtro de esta oferta (requisitos imprescindibles, nivel, tecnologías, idioma, ubicación). Indica además en "relacionada" si el puesto tiene relación real con lo que sabe hacer, aunque no cumpla todos los requisitos o la probabilidad sea baja. Es relacionada solo si se cumplen las dos cosas:
+1. El trabajo del día a día es del tipo que busca (puesto_que_busca): desarrollo de aplicaciones (web, móvil, escritorio, backend), datos, análisis, Data Science, IA o automatización.
+2. La tecnología principal del puesto (el lenguaje o herramienta que más piden) aparece en su CV, su perfil de LinkedIn o su portfolio.
+"Ser desarrollo de software" no basta: si el lenguaje principal es uno que no ha usado (C++, Delphi, VHDL, ABAP, COBOL…) o es de otro campo (hardware, sistemas o redes, ventas, otra ingeniería), no está relacionada. Un 6 significa opciones razonables; reserva el 9–10 para encajes casi perfectos.
 Extrae también las características de la oferta tal como aparecen; si un dato no aparece, escribe "no indicado".`,
     {
       type: 'object',

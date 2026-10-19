@@ -397,7 +397,23 @@ export function erroresVisibles(modal) {
           el.getAttribute('aria-label') ||
           ''
         return `${pregunta.trim()}: ${aviso}`.replace(/\s+/g, ' ')
-      }),
+      })
+      // La web nueva pone el aviso en un elemento "error-message-…" enlazado
+      // desde la pregunta con aria-describedby, sin marcar aria-invalid.
+      .concat(
+        [...raiz.querySelectorAll('[id^="error-message"]')]
+          .filter((e) => e.innerText.trim())
+          .map((e) => {
+            const campo = raiz.querySelector(`[aria-describedby~="${CSS.escape(e.id)}"]`)
+            const pregunta =
+              campo?.querySelector('legend')?.innerText ||
+              campo?.querySelector('input')?.getAttribute('aria-label') ||
+              campo?.getAttribute('aria-label') ||
+              ''
+            return `${pregunta.trim()}: ${e.innerText.trim()}`.replace(/\s+/g, ' ')
+          }),
+      )
+      .filter((t, i, todos) => todos.indexOf(t) === i),
   )
 }
 
@@ -429,6 +445,13 @@ export async function noSeguirEmpresa(modal) {
     if (/follow|sigue a|seguir a/i.test(texto) && (await cb.isChecked())) await cb.evaluate((i) => (i.labels?.[0] ?? i).click())
   }
 }
+
+/**
+ * Huella del paso actual: el texto del formulario sin los valores escritos
+ * (incluye el porcentaje de progreso). Si no cambia al pulsar "Siguiente",
+ * el formulario no avanzó.
+ */
+export const firmaPaso = (modal) => modal.evaluate((d) => d.innerText.replace(/\s+/g, ' ').slice(0, 3000)).catch(() => '')
 
 /** Texto del paso de revisión, para enseñártelo antes de enviar. */
 export const resumenRevision = (modal) => modal.innerText().then((t) => t.replace(/\n{2,}/g, '\n').trim())

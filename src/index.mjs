@@ -66,6 +66,7 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
   const usadas = []
   let errores = []
   let reintentos = 0
+  let revisarTodo = false
 
   for (let paso = 0; paso < 20; paso++) {
     if ((await li.botonDisponible(modal)) === 'enviar') {
@@ -107,7 +108,8 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
     // Qué hay que responder: lo vacío, y lo que LinkedIn marcó como erróneo.
     const conError = (c) => errores.some((e) => e.toLowerCase().includes(c.etiqueta.toLowerCase().slice(0, 40)))
     let pendientes = campos.filter((c) => c.tipo !== 'archivo' && (!c.valorActual || conError(c)))
-    if (errores.length && !pendientes.length) pendientes = campos.filter((c) => c.tipo !== 'archivo')
+    // Si el paso no avanzó, se revisan todas, también las que ya tenían valor.
+    if (revisarTodo || (errores.length && !pendientes.length)) pendientes = campos.filter((c) => c.tipo !== 'archivo')
 
     const decididas = new Map()
     const paraClaude = []
@@ -157,14 +159,22 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
 
     const siguiente = await li.botonDisponible(modal)
     if (!siguiente) throw new Error('no encuentro el botón para seguir')
+    const antes = await li.firmaPaso(modal)
     await li.pulsarBoton(modal, siguiente)
 
     errores = await li.erroresVisibles(modal)
-    if (errores.length) {
+    const avanzo = (await li.firmaPaso(modal)) !== antes
+    if (errores.length || !avanzo) {
+      if (!errores.length) errores = ['El formulario no avanzó al pulsar Siguiente: falta o es incorrecta alguna respuesta de este paso.']
       console.log(`   LinkedIn se queja: ${errores.join(' · ')}`)
-      if (++reintentos > 2) throw new Error(`el formulario no acepta las respuestas: ${errores.join(' · ')}`)
+      revisarTodo = true
+      if (++reintentos > 2) {
+        const vacias = (await li.leerCampos(modal)).filter((c) => c.tipo !== 'archivo' && !c.valorActual).map((c) => c.etiqueta)
+        throw new Error(`el formulario no avanza: ${errores.join(' · ')}${vacias.length ? ` (sin responder: ${vacias.join(' | ')})` : ''}`)
+      }
     } else {
       reintentos = 0
+      revisarTodo = false
     }
   }
   throw new Error('demasiados pasos en el formulario')
