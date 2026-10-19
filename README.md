@@ -123,6 +123,7 @@ npm run auto
 | `soloUltimosDias` | Solo ofertas publicadas en los últimos N días |
 | `paginasPorBusqueda` | Páginas de 25 resultados por búsqueda |
 | `maxPorEjecucion` | Solicitudes como máximo en cada ejecución |
+| `confirmarEnvio` | `false`: envía (y crea cuentas) sin preguntar s/n. Te sigue preguntando los datos que no estén en tu perfil |
 | `puntuacionMinima` | Probabilidad mínima (0–10) además de que esté relacionada. Por defecto `2`: solo descarta las imposibles (1/10). `0` = todas las relacionadas |
 | `excluirEmpresas` | Empresas que no quieres |
 | `excluirPalabrasEnTitulo` | p. ej. `"senior"` |

@@ -17,6 +17,7 @@
   "soloUltimosDias": 14,
   "paginasPorBusqueda": 2,
   "maxPorEjecucion": 15,
+  "confirmarEnvio": true,
   "puntuacionMinima": 2,
   "excluirEmpresas": [],
   "excluirPalabrasEnTitulo": [

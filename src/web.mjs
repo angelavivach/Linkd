@@ -177,7 +177,7 @@ export async function solicitarEnWeb(pagina, oferta, { perfil, config, modo, pre
     if (modo === 'prueba') {
       return `Modo prueba: no se permite ${que}. Llama a terminar con estado "prueba" y en el motivo resume qué rellenaste y qué faltaba.`
     }
-    if (modo === 'revisar') {
+    if (modo === 'revisar' && config.confirmarEnvio !== false) {
       const r = (await preguntar(`\n🌐 ¿Quieres ${que}? [s]í / [n]o: `)).trim().toLowerCase()
       if (r !== 's') return `La candidata no quiere ${que}. Llama a terminar con estado "no_enviada".`
     }

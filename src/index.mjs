@@ -78,7 +78,8 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
         await li.cerrarSolicitud(pagina)
         return { estado: 'prueba', motivo: 'llegó al último paso (no se envía en modo prueba)' }
       }
-      if (modo === 'revisar') {
+      // "confirmarEnvio": false en config.json → envía sin preguntar s/n.
+      if (modo === 'revisar' && config.confirmarEnvio !== false) {
         console.log('\n— Respuestas —')
         usadas.forEach((u) => console.log(`• ${u.pregunta}\n  → ${u.respuesta}`))
         const r = (await preguntar(`\n¿Enviar a ${oferta.empresa} (${oferta.puesto})? [s]í / [n]o / [p]arar: `)).trim().toLowerCase()
