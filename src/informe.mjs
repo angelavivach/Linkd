@@ -142,7 +142,7 @@ function pagina(ofertas) {
  * informe.html con todas las ofertas evaluadas (de registro/), de más a menos
  * probabilidad, y lo abre. Devuelve la ruta, o null si aún no hay ninguna.
  */
-export async function generarInforme({ abrir = true } = {}) {
+export async function generarInforme({ abrir = true, navegador = 'brave' } = {}) {
   const archivos = (await readdir('registro').catch(() => [])).filter((f) => f.endsWith('.json'))
   const ofertas = []
   for (const f of archivos) {
@@ -152,6 +152,11 @@ export async function generarInforme({ abrir = true } = {}) {
   if (!ofertas.length) return null
   ofertas.sort((a, b) => b.evaluacion.puntuacion - a.evaluacion.puntuacion)
   await writeFile(SALIDA, pagina(ofertas))
-  if (abrir && process.platform === 'darwin') execFile('open', [SALIDA])
+  // En el navegador de config.json (Brave por defecto): la app predeterminada
+  // para .html puede ser un editor de texto.
+  if (abrir && process.platform === 'darwin') {
+    const app = { brave: 'Brave Browser', chrome: 'Google Chrome' }[navegador]
+    execFile('open', app ? ['-a', app, SALIDA] : [SALIDA])
+  }
   return resolve(SALIDA)
 }

@@ -205,7 +205,7 @@ function motivoParaSaltar(oferta, config) {
 
 async function main() {
   if (args[0] === 'informe') {
-    const informe = await generarInforme()
+    const informe = await generarInforme({ navegador: (await leerConfig().catch(() => ({}))).navegador })
     console.log(informe ? `📊 ${informe}` : 'Aún no hay ofertas evaluadas en registro/.')
     return
   }
@@ -242,7 +242,7 @@ async function main() {
   process.on('SIGINT', async () => {
     // Parar a mitad también deja el informe al día con lo evaluado hasta ahora.
     await cerrar().catch(() => {})
-    await generarInforme().catch(() => {})
+    await generarInforme({ navegador: config.navegador }).catch(() => {})
     process.exit(130)
   })
 
@@ -352,7 +352,7 @@ async function main() {
   console.log(`\nListo: ${enviadas} ${modo === 'prueba' ? 'formularios completados (sin enviar)' : 'solicitudes enviadas'}.`)
   terminal?.close()
   await cerrar()
-  const informe = await generarInforme()
+  const informe = await generarInforme({ navegador: config.navegador })
   if (informe) console.log(`📊 Informe de ofertas por probabilidad: ${informe}`)
 }
 
