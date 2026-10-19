@@ -62,7 +62,7 @@ async function confirmarConmigo(campo, propuesta, nota) {
 
 /** Rellena una "Solicitud sencilla" de principio a fin. Devuelve { estado, motivo }. */
 async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
-  const modal = await li.abrirSolicitud(pagina)
+  const modal = await li.abrirSolicitud(pagina, oferta)
   const usadas = []
   let errores = []
   let reintentos = 0
@@ -182,6 +182,8 @@ async function solicitar(pagina, oferta, { perfil, respuestas, config }) {
 
 /** Filtros baratos antes de gastar una llamada a Claude. */
 function motivoParaSaltar(oferta, config) {
+  if (oferta.yaSolicitada) return 'ya la solicitaste'
+  if (oferta.cerrada) return 'ya no acepta solicitudes'
   const webEmpresa = config.webEmpresa ?? true
   if (!oferta.sencilla && !(oferta.externa && webEmpresa)) {
     return oferta.externa ? 'se solicita en la web de la empresa (webEmpresa está desactivado)' : 'no tiene botón para solicitar (¿ya solicitada?)'

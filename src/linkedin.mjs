@@ -140,14 +140,34 @@ export async function buscarOfertas(pagina, busqueda, { dias = 7, paginas = 1, s
 
 // ------------------------------------------------------------------ Oferta --
 
-const BOTON_SOLICITUD = /solicitud sencilla|easy apply/i
-// El "Solicitar" que lleva a la web de la empresa.
-const BOTON_EXTERNO = /^\s*(solicitar|apply|inscribirse)\b/i
-const botonExterno = (pagina) =>
-  pagina
-    .locator('.jobs-apply-button, button[aria-label*="sitio web"], button[aria-label*="company website"], button, a')
-    .filter({ hasText: BOTON_EXTERNO })
-    .first()
+/**
+ * Los botones de solicitar de ESTA oferta. Debajo de la descripción LinkedIn
+ * pone tarjetas de "empleos similares" que también dicen "Solicitud sencilla":
+ * pulsar una de esas abre el formulario de otra empresa. Por eso solo vale un
+ * botón cuyo texto sea exactamente ese y que esté antes de "Acerca del empleo".
+ * Se marcan con data-linkd-solicitar="sencilla" | "externa".
+ */
+function marcarBotones(pagina) {
+  return pagina.evaluate(() => {
+    document.querySelectorAll('[data-linkd-solicitar]').forEach((e) => e.removeAttribute('data-linkd-solicitar'))
+    const texto = (e) => (e.innerText || e.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim()
+    const acerca = [...document.querySelectorAll('h2, h3')].find((h) => /acerca del empleo|about the job/i.test(h.innerText))
+    const antesDeAcerca = (e) => !acerca || !!(e.compareDocumentPosition(acerca) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const candidatos = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && antesDeAcerca(e))
+    const sencilla = candidatos.find((e) => /^(solicitud sencilla|easy apply)$/i.test(texto(e)))
+    const externa = sencilla ? null : candidatos.find((e) => /^(solicitar|apply|inscribirse)( en el sitio web de la empresa| on company website)?$/i.test(texto(e)))
+    sencilla?.setAttribute('data-linkd-solicitar', 'sencilla')
+    externa?.setAttribute('data-linkd-solicitar', 'externa')
+    const cerrada = /ya no se aceptan solicitudes|no longer accepting applications/i.test(
+      (acerca ? [...document.querySelectorAll('main *')].filter(antesDeAcerca).map((e) => e.childElementCount ? '' : e.textContent).join(' ') : document.body.innerText),
+    )
+    const yaSolicitada = /solicitud enviada|application submitted|applied \d/i.test(
+      [...document.querySelectorAll('h2, p, span')].filter(antesDeAcerca).map((e) => e.innerText).join(' '),
+    )
+    return { sencilla: !!sencilla, externa: !!externa, cerrada, yaSolicitada }
+  })
+}
+const botonDe = (pagina, tipo) => pagina.locator(`[data-linkd-solicitar="${tipo}"]`).first()
 
 export async function leerOferta(pagina, id) {
   const url = `https://www.linkedin.com/jobs/view/${id}/`
@@ -182,10 +202,9 @@ export async function leerOferta(pagina, id) {
         (document.querySelector('main')?.innerText ?? '').slice(0, 15000),
     }
   })
-  const boton = pagina.locator('button, a').filter({ hasText: BOTON_SOLICITUD }).first()
-  const sencilla = await boton.isVisible().catch(() => false)
-  const externa = !sencilla && (await botonExterno(pagina).isVisible().catch(() => false))
-  return { id, url, ...datos, sencilla, externa }
+  const { sencilla, externa, cerrada, yaSolicitada } = await marcarBotones(pagina)
+  if (cerrada || yaSolicitada) return { id, url, ...datos, sencilla: false, externa: false, cerrada, yaSolicitada }
+  return { id, url, ...datos, sencilla, externa, cerrada: false, yaSolicitada: false }
 }
 
 // ---------------------------------------------------------- El formulario --
@@ -196,7 +215,8 @@ export async function leerOferta(pagina, id) {
  */
 export async function abrirWebExterna(pagina) {
   const nueva = pagina.context().waitForEvent('page', { timeout: 20_000 }).catch(() => null)
-  await botonExterno(pagina).click()
+  await marcarBotones(pagina)
+  await botonDe(pagina, 'externa').click()
   await pausa(1500, 2500)
   await pagina
     .locator('[role="dialog"] button, [role="dialog"] a')
@@ -215,14 +235,24 @@ export async function abrirWebExterna(pagina) {
 const modalDe = (pagina) =>
   pagina.locator('dialog[data-testid="dialog"][open], .jobs-easy-apply-modal, [role="dialog"][aria-modal="true"]').last()
 
-export async function abrirSolicitud(pagina) {
-  const boton = pagina.locator('button, a').filter({ hasText: BOTON_SOLICITUD, visible: true }).first()
+/**
+ * Abre la Solicitud sencilla de la oferta y comprueba que el formulario es de
+ * esa empresa ("Aplicar a <empresa>"). Si no coincide, lo cierra sin tocarlo.
+ */
+export async function abrirSolicitud(pagina, oferta) {
   const modal = modalDe(pagina)
   // Si la página aún se está montando, el primer clic a veces no hace nada.
   for (let intento = 0; intento < 3; intento++) {
-    await boton.click()
+    if (!(await marcarBotones(pagina)).sencilla) throw new Error('no encuentro el botón de Solicitud sencilla de esta oferta')
+    await botonDe(pagina, 'sencilla').click()
     if (await modal.waitFor({ timeout: 8000 }).then(() => true, () => false)) {
       await pausa()
+      const cabecera = await modal.locator('h2, header').first().innerText().catch(() => '')
+      const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
+      if (oferta?.empresa && !norm(cabecera).includes(norm(oferta.empresa))) {
+        await cerrarSolicitud(pagina)
+        throw new Error(`el formulario que se abrió es de otra empresa ("${cabecera.trim()}"); no se ha tocado`)
+      }
       return modal
     }
   }
@@ -265,14 +295,21 @@ export function leerCampos(modal) {
     const esSeguir = (cb) => /follow|sigue a|seguir a/i.test(`${cb.id} ${cb.getAttribute('aria-label') ?? ''} ${etiquetaDe(cb)}`)
 
     // Opción única: radios agrupados en un fieldset (los radios están ocultos; el fieldset no).
+    // El selector de CV (tarjetas con tus PDF) también es un grupo de radios,
+    // pero no es una pregunta: se trata aparte, más abajo.
+    const esSelectorCV = (fs) =>
+      !!fs.querySelector('#easyApplyUploadedResumeRef, [componentkey*="Resume" i]') || /\.(pdf|docx?)\b/i.test(fs.innerText)
     for (const fs of raiz.querySelectorAll('fieldset')) {
+      if (esSelectorCV(fs)) continue
       const radios = [...fs.querySelectorAll('input[type="radio"]')].filter((r) => !/\.pdf$|\.docx?$/i.test(r.getAttribute('aria-label') ?? ''))
       if (!radios.length || !visible(fs)) continue
       // La pregunta: el legend o, en la web nueva, el aria-label de los radios.
       const etiqueta =
         limpiar(fs.querySelector('legend')?.innerText) ||
         limpiar(radios[0].getAttribute('aria-label')) ||
+        limpiar(fs.querySelector('[role="radio"][aria-label]')?.getAttribute('aria-label')) ||
         limpiar(fs.getAttribute('aria-label')) ||
+        limpiar(fs.previousElementSibling?.innerText) ||
         limpiar(fs.innerText).slice(0, 300)
       // El texto de cada opción: su label o, si está vacío, el texto que tiene al lado.
       const opcionDe = (r) => {
@@ -333,6 +370,7 @@ export function leerCampos(modal) {
       const etiqueta = etiquetaDe(f) || limpiar(contenedor(f)?.innerText)
       // Si ya hay un CV elegido de solicitudes anteriores no hace falta subir otro.
       const yaHayCV =
+        [...raiz.querySelectorAll('fieldset')].some((fs) => esSelectorCV(fs) && fs.querySelector('input[type="radio"]:checked, [aria-checked="true"]')) ||
         [...raiz.querySelectorAll('input[type="radio"]')].some((r) => r.checked && /\.(pdf|docx?)$/i.test(r.getAttribute('aria-label') ?? '')) ||
         !!raiz.querySelector('.jobs-document-upload-redesign-card__container--selected, .jobs-resume-picker__resume--selected')
       campos.push({ id: marcar(f), tipo: 'archivo', etiqueta, valorActual: yaHayCV ? 'cv ya elegido' : '', obligatorio: false })
