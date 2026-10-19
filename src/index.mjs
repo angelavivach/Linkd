@@ -240,7 +240,9 @@ async function main() {
   const { pagina, cerrar } = await li.abrirNavegador(config.navegador)
   cerrarNavegador = cerrar
   process.on('SIGINT', async () => {
+    // Parar a mitad también deja el informe al día con lo evaluado hasta ahora.
     await cerrar().catch(() => {})
+    await generarInforme().catch(() => {})
     process.exit(130)
   })
 
