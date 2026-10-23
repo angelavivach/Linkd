@@ -23,6 +23,9 @@ Reglas:
 // Sin ANTHROPIC_API_KEY: si estuviera definida, el SDK la usaría y cobraría la API.
 const { ANTHROPIC_API_KEY, ...entorno } = process.env
 
+/** La sesión de Claude Code ha caducado: no tiene sentido seguir con otras ofertas. */
+export class AuthError extends Error {}
+
 /** Una petición a Claude que devuelve JSON con la forma del esquema. */
 async function pedirJSON(perfil, peticion, schema, effort = 'medium') {
   const sesion = query({
@@ -42,8 +45,12 @@ async function pedirJSON(perfil, peticion, schema, effort = 'medium') {
   })
   for await (const mensaje of sesion) {
     if (mensaje.type !== 'result') continue
+    // Si la sesión de Claude Code caducó, el SDK responde con éxito y un texto de error.
+    if (mensaje.is_error || /authenticate|OAuth|expired|login/i.test(String(mensaje.result ?? ''))) {
+      throw new AuthError('La sesión de Claude Code ha caducado. Abre una Terminal, ejecuta "claude" y escribe /login para volver a iniciarla.')
+    }
     if (mensaje.subtype !== 'success' || mensaje.structured_output == null) {
-      throw new Error(`Claude no respondió (${mensaje.subtype}). ¿Has iniciado sesión en Claude Code? Ejecuta "claude" en una terminal.`)
+      throw new Error(`Claude no devolvió una respuesta válida (${mensaje.subtype}).`)
     }
     return mensaje.structured_output
   }

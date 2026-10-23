@@ -7,6 +7,7 @@ import * as li from './linkedin.mjs'
 import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
 import { generarInforme } from './informe.mjs'
 import { solicitarEnWeb } from './web.mjs'
+import { AuthError } from './claude.mjs'
 import { enviarTelegram, chatsDelBot, ofertasDesde, textoResumen } from './telegram.mjs'
 
 /**
@@ -311,10 +312,18 @@ async function main() {
       }
 
       // Todas se evalúan, aunque luego no se soliciten: el informe las necesita.
-      oferta.evaluacion = await evaluarOferta(perfil, oferta).catch((e) => {
+      try {
+        oferta.evaluacion = await evaluarOferta(perfil, oferta)
+      } catch (e) {
+        // Sesión caducada: no tiene sentido seguir, y no marcamos nada como error.
+        if (e instanceof AuthError) throw e
+        // Otro fallo: se queda como error y se reintenta en la siguiente ejecución.
         console.warn(`   ⚠️  No pude evaluarla: ${e.message}`)
-        return null
-      })
+        await guardarOferta(oferta, { estado: 'error', motivo: `no pude evaluarla: ${e.message}` })
+        if (modo !== 'prueba') await anotar(oferta, 'error', `no pude evaluarla: ${e.message}`)
+        await avisarOferta(config, oferta, 'error', `no pude evaluarla: ${e.message}`)
+        continue
+      }
       const puntuacion = oferta.evaluacion?.puntuacion
       if (oferta.evaluacion) console.log(`   Probabilidad ${puntuacion}/10: ${oferta.evaluacion.motivo}`)
       // Lo que decide es si tiene relación con lo que sabes, no la probabilidad:
@@ -326,6 +335,7 @@ async function main() {
         console.log(`   ⏭  ${motivo}`)
         await guardarOferta(oferta, { estado: 'omitida', motivo })
         if (modo !== 'prueba') await anotar(oferta, 'omitida', motivo)
+        await avisarOferta(config, oferta, 'omitida', motivo)
         continue
       }
 
@@ -361,6 +371,7 @@ async function main() {
       console.log(`   ${icono} ${resultado.estado}${resultado.motivo ? `: ${resultado.motivo}` : ''}`)
       await guardarOferta(oferta, { estado: resultado.estado, motivo: resultado.motivo ?? '' })
       if (modo !== 'prueba') await anotar(oferta, resultado.estado, resultado.motivo)
+      await avisarOferta(config, oferta, resultado.estado, resultado.motivo)
       if (resultado.estado === 'enviada' || resultado.estado === 'prueba') {
         enviadas++
         await li.pausa(esperaMin * 1000, esperaMax * 1000)
@@ -384,6 +395,25 @@ async function resumenTelegram(config, inicio) {
     if (enviado) console.log(`📱 Resumen enviado a Telegram (${ofertas.length} ofertas).`)
   } catch (e) {
     console.warn(`⚠️  No pude enviar el resumen a Telegram: ${e.message}`)
+  }
+}
+
+const ICONO = { enviada: '✅', omitida: '⏭', error: '❌', prueba: '🧪', 'no enviada': '⏭', 'necesita ayuda': '✋', 'sin solicitar': '⏭' }
+const TEXTO = { enviada: 'Enviada', omitida: 'No solicitada', error: 'Error', prueba: 'Rellenada en prueba', 'no enviada': 'No enviada', 'necesita ayuda': 'Necesita que la termines tú', 'sin solicitar': 'Sin solicitar' }
+
+/** Cada oferta, al terminar de procesarla, a tu chat de Telegram. Si falla, solo avisa. */
+async function avisarOferta(config, oferta, estado, motivo = '') {
+  if (!config.telegram?.token || !config.telegram?.chatId) return
+  const prob = oferta.evaluacion?.puntuacion != null ? `${oferta.evaluacion.puntuacion}/10` : 'sin evaluar'
+  const texto = [
+    `${ICONO[estado] ?? '📋'} ${oferta.puesto ?? '(sin puesto)'} · ${oferta.empresa ?? ''}`,
+    `Probabilidad ${prob} · ${TEXTO[estado] ?? estado}${motivo ? ` — ${motivo.slice(0, 160)}` : ''}`,
+    oferta.url,
+  ].join('\n')
+  try {
+    await enviarTelegram(config, texto)
+  } catch (e) {
+    console.warn(`⚠️  No pude enviar la oferta a Telegram: ${e.message}`)
   }
 }
 
