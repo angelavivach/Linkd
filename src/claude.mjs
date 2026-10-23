@@ -28,16 +28,16 @@ export class AuthError extends Error {}
 
 /**
  * Una petición a Claude que devuelve JSON con la forma del esquema. Si la sesión
- * se renueva a destiempo, reintenta un par de veces antes de rendirse.
+ * se renueva a destiempo, reintenta varias veces, con pausas largas, antes de rendirse.
  */
 async function pedirJSON(perfil, peticion, schema, effort = 'medium') {
   for (let intento = 1; ; intento++) {
     try {
       return await pedirJSONUnaVez(perfil, peticion, schema, effort)
     } catch (e) {
-      if (!(e instanceof AuthError) || intento >= 3) throw e
-      console.warn(`   ⏳ La sesión de Claude Code no respondió; reintento en 30 s (${intento}/2)…`)
-      await new Promise((r) => setTimeout(r, 30_000))
+      if (!(e instanceof AuthError) || intento >= 4) throw e
+      console.warn(`   ⏳ La sesión de Claude Code no respondió; reintento en 90 s (${intento}/3)…`)
+      await new Promise((r) => setTimeout(r, 90_000))
     }
   }
 }
