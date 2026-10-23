@@ -25,6 +25,7 @@
     "lead",
     "principal"
   ],
+  "telegram": { "token": "", "chatId": "" },
   "segundosEntreOfertas": [
     20,
     60

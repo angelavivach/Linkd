@@ -15,6 +15,7 @@
     "prueba": "node src/index.mjs --prueba",
     "auto": "node src/index.mjs --auto",
     "informe": "node src/index.mjs informe",
+    "telegram": "node src/index.mjs telegram",
     "panel": "node web/servidor.mjs"
   },
   "dependencies": {

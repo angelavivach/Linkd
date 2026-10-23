@@ -7,6 +7,7 @@ import * as li from './linkedin.mjs'
 import { ofertasVistas, anotar, guardarOferta, cargarRespuestas } from './registro.mjs'
 import { generarInforme } from './informe.mjs'
 import { solicitarEnWeb } from './web.mjs'
+import { enviarTelegram, chatsDelBot, ofertasDesde, textoResumen } from './telegram.mjs'
 
 /**
  * Modos:
@@ -204,6 +205,22 @@ function motivoParaSaltar(oferta, config) {
 }
 
 async function main() {
+  if (args[0] === 'telegram') {
+    const config = await leerConfig()
+    if (args[1] === 'chats') {
+      const chats = await chatsDelBot(config)
+      console.log(chats.length ? chats.map((c) => `chatId: ${c.id}  (${c.nombre})`).join('\n') : 'Escribe primero un mensaje a tu bot en Telegram y repite este comando.')
+      return
+    }
+    if (args[1] === 'prueba') {
+      const ok = await enviarTelegram(config, '✅ Linkd conectado a Telegram.')
+      console.log(ok ? 'Mensaje de prueba enviado.' : 'Falta "telegram.token" o "telegram.chatId" en config.json.')
+      return
+    }
+    console.log('Uso: npm run telegram -- chats | prueba')
+    return
+  }
+
   if (args[0] === 'informe') {
     const informe = await generarInforme({ navegador: (await leerConfig().catch(() => ({}))).navegador })
     console.log(informe ? `📊 ${informe}` : 'Aún no hay ofertas evaluadas en registro/.')
@@ -226,6 +243,7 @@ async function main() {
   }
 
   const config = await leerConfig()
+  const inicio = Date.now()
   const respuestas = await cargarRespuestas()
   const vistas = await ofertasVistas()
   const [esperaMin, esperaMax] = config.segundosEntreOfertas ?? [20, 60]
@@ -243,6 +261,7 @@ async function main() {
     // Parar a mitad también deja el informe al día con lo evaluado hasta ahora.
     await cerrar().catch(() => {})
     await generarInforme({ navegador: config.navegador }).catch(() => {})
+    await resumenTelegram(config, inicio)
     process.exit(130)
   })
 
@@ -352,8 +371,20 @@ async function main() {
   console.log(`\nListo: ${enviadas} ${modo === 'prueba' ? 'formularios completados (sin enviar)' : 'solicitudes enviadas'}.`)
   terminal?.close()
   await cerrar()
+  await resumenTelegram(config, inicio)
   const informe = await generarInforme({ navegador: config.navegador })
   if (informe) console.log(`📊 Informe de ofertas por probabilidad: ${informe}`)
+}
+
+/** Manda a Telegram las ofertas de esta ejecución. Si falla, solo avisa: no para nada. */
+async function resumenTelegram(config, inicio) {
+  try {
+    const ofertas = await ofertasDesde(inicio)
+    const enviado = await enviarTelegram(config, textoResumen(ofertas))
+    if (enviado) console.log(`📱 Resumen enviado a Telegram (${ofertas.length} ofertas).`)
+  } catch (e) {
+    console.warn(`⚠️  No pude enviar el resumen a Telegram: ${e.message}`)
+  }
 }
 
 let cerrarNavegador

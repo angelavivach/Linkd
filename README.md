@@ -139,6 +139,7 @@ npm run auto
 | `puntuacionMinima` | Probabilidad mínima (0–10) además de que esté relacionada. Por defecto `2`: solo descarta las imposibles (1/10). `0` = todas las relacionadas |
 | `excluirEmpresas` | Empresas que no quieres |
 | `excluirPalabrasEnTitulo` | p. ej. `"senior"` |
+| `telegram` | `{ "token", "chatId" }`: manda la lista de ofertas y los enlaces a tu chat de Telegram al terminar. El token va solo en `config.json` |
 | `segundosEntreOfertas` | Pausa aleatoria entre solicitudes, `[mín, máx]` |
 
 ## Modelo
